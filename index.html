@@ -450,8 +450,8 @@ button{font-family:inherit;}
   <div class="screen" id="screen-settings">
     <div class="wrap">
       <div class="brand"><h1>⚙ 설정</h1><p>이 기기에만 저장됩니다</p></div>
-      <label class="setrow"><input type="checkbox" id="setJoy"> 가상 조이스틱 + 대시·궁극기 버튼 (터치 화면용)</label>
-      <label class="setrow"><input type="checkbox" id="setPad"> 숫자 키패드 (입력창을 누르면 표시 · - √ 포함)</label>
+      <label class="setrow"><input type="checkbox" id="setJoy"> 가상 조이스틱 + 대시·궁극기 버튼 (모바일용)</label>
+      <label class="setrow"><input type="checkbox" id="setPad"> 숫자 키패드 (입력창을 누르면 표시 · - √ 포함) (모바일용)</label>
       <div class="brand" style="margin-top:14px"><p>키를 바꾸려면 버튼을 누른 뒤 원하는 키를 누르세요 (Esc = 취소). 방향키는 항상 이동에 사용됩니다.</p></div>
       <div id="keyList"></div>
       <button class="btn ghost" id="keyReset" style="margin-top:12px;">키 기본값으로</button>
@@ -1076,6 +1076,10 @@ function openBossQuiz(){
 function renderPad(){
   var pad=document.getElementById('chPad'); if(!pad) return;
   pad.innerHTML='';
+  var _on=!(typeof KB!=='undefined'&&KB.cfg&&KB.cfg.pad===false), _h=document.querySelector('#challenge .chHint');
+  pad.style.display=_on?'':'none';
+  if(_h) _h.innerHTML=_on?'숫자 · − · <b>√</b> 버튼 또는 <b>'+KB.label('sqrt')+'</b> (예: 3√2) · Enter 제출':'숫자 · − · <b>'+KB.label('sqrt')+' = √</b> (예: 3√2) · Enter 제출';
+  if(!_on) return;
   var keysArr=['7','8','9','4','5','6','1','2','3','-','0','⌫','√'];
   keysArr.forEach(function(k){
     var b=document.createElement('button');
@@ -3824,8 +3828,8 @@ var KB=(function(){
   var CAN={up:'w',down:'s',left:'a',right:'d',dash:' ',s1:'1',s2:'2',s3:'3',s4:'4',ult:'5',sqrt:'√'};
   var NAME={up:'위로 이동',down:'아래로 이동',left:'왼쪽 이동',right:'오른쪽 이동',dash:'대시',s1:'스킬 1',s2:'스킬 2',s3:'스킬 3',s4:'스킬 4',ult:'궁극기',sqrt:'√ 입력 (퀴즈)'};
   var ORDER=['up','down','left','right','dash','s1','s2','s3','s4','ult','sqrt'];
-  var cfg={bind:{},joy:null,pad:null}, KEY='eclipsilon_settings_v1';
-  try{ var s=JSON.parse(localStorage.getItem(KEY)||'{}'); if(s.bind&&typeof s.bind==='object') cfg.bind=s.bind; cfg.joy=s.joy; cfg.pad=s.pad; }catch(e){}
+  var cfg={bind:{},joy:null,pad:null}, KEY='eclipsilon_settings_v2';
+  try{ var s=JSON.parse(localStorage.getItem(KEY)||'null'); if(!s){ var o=JSON.parse(localStorage.getItem('eclipsilon_settings_v1')||'{}'); s={bind:o.bind}; } if(s.bind&&typeof s.bind==='object') cfg.bind=s.bind; cfg.joy=s.joy; cfg.pad=s.pad; }catch(e){}
   var coarse=false; try{ coarse=window.matchMedia('(pointer:coarse)').matches; }catch(e){}
   if(cfg.joy===null||cfg.joy===undefined) cfg.joy=coarse;
   if(cfg.pad===null||cfg.pad===undefined) cfg.pad=true;
@@ -3851,7 +3855,7 @@ var JOY={active:false,x:0,y:0};
   +'#touchBtns button{width:74px;height:74px;border-radius:50%;border:2px solid var(--ink);background:rgba(128,128,128,.25);color:var(--ink);font-weight:700;font-size:13px;font-family:inherit;touch-action:none}'
   +'#kpad{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:99999;display:none;grid-template-columns:repeat(3,68px);gap:6px;padding:8px;background:var(--bg);border:2px solid var(--ink);box-shadow:0 4px 18px rgba(0,0,0,.35)}'
   +'#kpad button{height:48px;font-weight:700;font-size:20px;font-family:inherit;border:2px solid var(--ink);background:var(--card-bg,var(--bg));color:var(--ink)}#kpad button:disabled{opacity:.25}'
-  +'.setrow{display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid var(--line);font-size:14px}.setrow button{margin-left:auto;min-width:96px;padding:6px 10px;border:2px solid var(--ink);background:transparent;color:var(--ink);font:inherit;cursor:pointer}';
+  +'#kpad button,.numpad button{background:#1c1c1c !important;color:#fff !important;border:1.5px solid #8a8a8a !important}.numpad button.go{background:#3b3b3b !important}\n.setrow{display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid var(--line);font-size:14px}.setrow button{margin-left:auto;min-width:96px;padding:6px 10px;border:2px solid var(--ink);background:transparent;color:var(--ink);font:inherit;cursor:pointer}';
   document.head.appendChild(css);
   var base=document.createElement('div'); base.id='joyBase'; base.innerHTML='<div id="joyKnob"></div>'; document.body.appendChild(base);
   var tb=document.createElement('div'); tb.id='touchBtns'; tb.innerHTML='<button id="tbUlt">ULT</button><button id="tbDash">DASH</button>'; document.body.appendChild(tb);
@@ -3869,8 +3873,8 @@ var JOY={active:false,x:0,y:0};
   ['pointerup','pointercancel','pointerleave'].forEach(function(t){ d.addEventListener(t,function(){ fire('keyup','dash',' '); }); });
   u.addEventListener('pointerdown',function(e){ e.preventDefault(); fire('keydown','ult','5'); fire('keyup','ult','5'); });
   setInterval(function(){
-    var g=document.getElementById('screen-game'), on=!!(KB.cfg.joy&&g&&g.classList.contains('active'));
-    base.style.display=on?'block':'none'; tb.style.display=on?'flex':'none';
+    var A=function(id){ var e=document.getElementById(id); return !!(e&&e.classList.contains('active')); }, gm=A('screen-game'), on=!!(KB.cfg.joy&&(gm||A('screen-puzzle')));
+    base.style.display=on?'block':'none'; tb.style.display=(on&&gm)?'flex':'none';
     if(!on&&JOY.active){ JOY.active=false; JOY.x=JOY.y=0; }
   },300);
 })();
@@ -3886,7 +3890,7 @@ var JOY={active:false,x:0,y:0};
   });
   document.body.appendChild(kp);
   var tgt=null;
-  function ok(t){ return t&&t.tagName==='INPUT'&&(t.type==='number'||t.type==='text')&&t.id!=='authId'&&t.id!=='authPw'; }
+  function ok(t){ return t&&t.tagName==='INPUT'&&(t.type==='number'||t.type==='text')&&t.id!=='authId'&&t.id!=='authPw'&&t.dataset.nokp!=='1'; }
   function press(k){
     var t=tgt; if(!t||!document.body.contains(t)) return;
     if(k==='↵'){ t.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',bubbles:true})); return; }
@@ -3896,9 +3900,10 @@ var JOY={active:false,x:0,y:0};
     t.dispatchEvent(new Event('input',{bubbles:true}));
   }
   document.addEventListener('focusin',function(e){
-    var t=e.target; if(!KB.cfg.pad||!ok(t)) return;
+    var t=e.target; if(t&&t.tagName==='INPUT'&&t.dataset.kpMod==='1'&&!KB.cfg.pad){ t.removeAttribute('inputmode'); }
+    if(!KB.cfg.pad||!ok(t)) return;
     if(t.type==='number'){ t.dataset.wasNum='1'; t.type='text'; t.focus(); }
-    t.setAttribute('inputmode','none'); tgt=t; kp.style.display='grid';
+    t.setAttribute('inputmode','none'); t.dataset.kpMod='1'; tgt=t; kp.style.display='grid';
     var s=kp.querySelector('[data-k="√"]'); if(s) s.disabled=!!t.dataset.wasNum;
   });
   document.addEventListener('focusout',function(){ setTimeout(function(){ if(!ok(document.activeElement)){ kp.style.display='none'; tgt=null; } },150); });
@@ -3924,7 +3929,7 @@ var JOY={active:false,x:0,y:0};
     wait=null; render();
   },true);
   document.getElementById('setJoy').addEventListener('change',function(){ KB.cfg.joy=this.checked; KB.save(); });
-  document.getElementById('setPad').addEventListener('change',function(){ KB.cfg.pad=this.checked; KB.save(); });
+  document.getElementById('setPad').addEventListener('change',function(){ KB.cfg.pad=this.checked; KB.save(); if(!this.checked){ var k=document.getElementById('kpad'); if(k) k.style.display='none'; } });
   document.getElementById('keyReset').addEventListener('click',function(){ KB.reset(); wait=null; render(); });
   document.getElementById('gotoSettings').addEventListener('click',function(){ showScreen('settings'); });
   document.getElementById('setBack').addEventListener('click',function(){ wait=null; showScreen('menu'); });
@@ -3972,6 +3977,145 @@ var JOY={active:false,x:0,y:0};
   d.className='btn ghost'; d.id='lobbyDonate'; d.style.marginTop='10px'; d.textContent='☕ 개발자 과자 사주기';
   btn.parentNode.insertBefore(d,btn.nextSibling);
   d.addEventListener('click',function(e){ e.stopPropagation(); showScreen('donate'); tab('pay'); copy(); });
+})();
+
+/* ===================== DLC 1 · 이상한 나라의 엡실론 (퍼즐) ===================== */
+(function(){
+  var DLC_KEY='hello';                       // ← 테스트용 키 번호 (나중에 바꾸거나 제거)
+  var W=960,H=540, PV={x:600,y:420}, PL=330, TH_MAX=Math.atan(408), TH_MIN=0.03;
+  var _nmD=normalizeMeta; normalizeMeta=function(m){ var d=_nmD(m); d.dlc=(m&&m.dlc&&typeof m.dlc==='object')?m.dlc:{}; return d; };
+  function dlcUnlocked(){ return isAdmin()||!!(meta&&meta.clearedStages&&meta.clearedStages[10]); }
+
+  /* ---------- 화면 ---------- */
+  var scr=document.createElement('div'); scr.className='screen'; scr.id='screen-puzzle';
+  scr.innerHTML='<canvas id="pzCv" style="position:absolute;left:0;top:0;width:100%;height:100%;touch-action:none"></canvas>'
+   +'<div style="position:absolute;right:10px;top:10px;display:flex;gap:8px;z-index:5"><button class="btn ghost" id="pzReset" style="padding:6px 12px;font-size:12px;width:auto;white-space:nowrap">↺ 초기화</button><button class="btn ghost" id="pzExit" style="padding:6px 12px;font-size:12px;width:auto;white-space:nowrap">나가기</button></div>'
+   +'<div id="pzResult" style="display:none;position:absolute;left:0;top:0;right:0;bottom:0;z-index:6;background:rgba(0,0,0,.55);align-items:center;justify-content:center"><div class="gocard" style="max-width:360px;margin:16px;background:var(--bg)"><h2 id="pzResT" style="margin:0 0 10px"></h2><div id="pzResD" style="margin-bottom:14px;line-height:1.5"></div><button class="btn" id="pzResBtn">나가기</button></div></div>';
+  document.getElementById('screen-lobby').parentNode.appendChild(scr);
+  var cv=document.getElementById('pzCv'), ctx=cv.getContext('2d'), S=null, raf=0, last=0, keys={};
+  function active(){ return scr.classList.contains('active'); }
+  function css(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim()||'#111'; }
+
+  function reset(){
+    S={p:{x:330,y:430,r:14},th:Math.atan(1),over:false,
+       g:[{ch:'1',alt:'−',x:218,y:281,r:26,ang:0,done:false},{ch:'8',alt:'∞',x:385,y:250,r:30,ang:0,done:false}]};
+    document.getElementById('pzResult').style.display='none';
+  }
+  function down(a,alt){ return !!(keys[KB.cur(a)]||keys[alt]); }
+
+  function update(dt){
+    var p=S.p, ix=(down('right','ArrowRight')?1:0)-(down('left','ArrowLeft')?1:0), iy=(down('down','ArrowDown')?1:0)-(down('up','ArrowUp')?1:0);
+    if(JOY.active){ ix=JOY.x; iy=JOY.y; }
+    var l=Math.hypot(ix,iy); if(l>1){ ix/=l; iy/=l; }
+    var ox=p.x, oy=p.y; p.x+=ix*240*dt; p.y+=iy*240*dt;
+    p.x=Math.max(p.r+6,Math.min(W-p.r-6,p.x)); p.y=Math.max(p.r+6,Math.min(H-p.r-6,p.y));
+    var dx=p.x-ox, dy=p.y-oy;
+    S.g.forEach(function(g){                                   // 글자: 몸으로 스치면 돌아간다
+      var vx=p.x-g.x, vy=p.y-g.y, d=Math.hypot(vx,vy)||0.001, mn=g.r+p.r;
+      if(d<mn){ var nx=vx/d, ny=vy/d; p.x=g.x+nx*mn; p.y=g.y+ny*mn;
+        if(!g.done){ g.ang+=(nx*dy-ny*dx)/g.r*1.1; if(Math.abs(g.ang)>1.05){ g.done=true; g.ang=(g.ang>0?1:-1)*Math.PI/2; } } }
+    });
+    var dxl=Math.cos(S.th), dyl=-Math.sin(S.th), rx=p.x-PV.x, ry=p.y-PV.y;   // 그래프: 밀면 기울기가 바뀐다
+    var t=Math.max(0,Math.min(PL,rx*dxl+ry*dyl)), cx=PV.x+dxl*t, cy=PV.y+dyl*t, qx=p.x-cx, qy=p.y-cy, dd=Math.hypot(qx,qy), mn=p.r+4;
+    if(dd<mn){ if(dd<0.001){ qx=-dyl; qy=dxl; dd=1; }
+      var nx=qx/dd, ny=qy/dd, pen=mn-dd; p.x=cx+nx*mn; p.y=cy+ny*mn;
+      var s=-(nx*(-Math.sin(S.th))+ny*(-Math.cos(S.th)));
+      S.th+=s*pen/Math.max(t,40)*0.4; }
+    S.th=Math.max(TH_MIN,Math.min(TH_MAX,S.th));
+    var g1=S.g[0], g8=S.g[1];
+    if(g1.done&&g8.done) finish('hidden');
+    else if(S.th>=TH_MAX-1e-9&&!g1.done&&!g8.done) finish('fake');
+  }
+  function finish(kind){
+    S.over=true; meta.dlc=meta.dlc||{}; var d=meta.dlc.eps1=meta.dlc.eps1||{}, T,D;
+    if(kind==='fake'){ meta.currency+=408; d.fake=(d.fake||0)+1; T='CLEAR?'; D='f(x)=408x 를 만들었습니다.<br><b>히든 조건을 만족하지 못했습니다.</b><br>+408 P';
+      var b=document.getElementById('pzResBtn'); b.textContent='나가기'; }
+    else { var first=!d.hidden; d.hidden=true; T='✦ HIDDEN CLEAR ✦'; D='lim<sub>x→5</sub> f(x)/(5−x) = ∞<br><b>'+(first?'가호를 얻었습니다!':'이미 가호를 얻었습니다.')+'</b><br><span style="font-size:12px;opacity:.7">(가호 효과는 아직 미구현)</span>'; }
+    saveMeta();
+    document.getElementById('pzResT').textContent=T; document.getElementById('pzResD').innerHTML=D;
+    document.getElementById('pzResult').style.display='flex';
+  }
+
+  /* ---------- 그리기 ---------- */
+  function fmtA(){ var a=Math.tan(S.th); if(S.th>=TH_MAX-1e-9) return '408'; return a<10?a.toFixed(2):(a<100?a.toFixed(1):String(Math.round(a))); }
+  function draw(){
+    var dpr=window.devicePixelRatio||1, cw=cv.clientWidth, ch=cv.clientHeight;
+    if(cv.width!==Math.round(cw*dpr)||cv.height!==Math.round(ch*dpr)){ cv.width=Math.round(cw*dpr); cv.height=Math.round(ch*dpr); }
+    ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,cw,ch);
+    var s=Math.min(cw/W,ch/H); ctx.translate((cw-W*s)/2,(ch-H*s)/2); ctx.scale(s,s);
+    var ink=css('--ink'), soft=css('--ink-soft');
+    ctx.fillStyle='rgba(128,128,128,.08)'; ctx.fillRect(0,0,W,H); ctx.strokeStyle=ink; ctx.lineWidth=6; ctx.strokeRect(3,3,W-6,H-6);
+    ctx.setLineDash([8,8]); ctx.lineWidth=2; ctx.strokeStyle=soft; ctx.beginPath(); ctx.moveTo(470,50); ctx.lineTo(470,470); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=ink; ctx.textAlign='center'; ctx.font='bold 18px monospace'; ctx.fillText('DLC 1 · 이상한 나라의 엡실론',W/2,34);
+    ctx.font='16px sans-serif'; ctx.fillStyle=soft; ctx.fillText('몸으로 밀어 돌려서 수식을 만족시키세요',W/2,H-18);
+    // 수식
+    ctx.fillStyle=ink; ctx.font='44px "Times New Roman",serif'; ctx.textAlign='left'; ctx.fillText('lim',52,268);
+    ctx.font='20px "Times New Roman",serif'; ctx.fillText('x → 5',52,296);
+    ctx.textAlign='center'; ctx.font='italic 50px "Times New Roman",serif'; ctx.fillText('f(x)',218,232);
+    ctx.fillRect(150,244,136,3);
+    ctx.font='54px "Times New Roman",serif'; ctx.fillText('5',178,300); ctx.font='italic 54px "Times New Roman",serif'; ctx.fillText('x',258,300);
+    ctx.font='54px "Times New Roman",serif'; ctx.fillText('=',318,268);
+    S.g.forEach(function(g){
+      ctx.save(); ctx.translate(g.x,g.y);
+      if(!g.done){ ctx.setLineDash([4,6]); ctx.strokeStyle=soft; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(0,0,g.r,0,7); ctx.stroke(); ctx.setLineDash([]); ctx.rotate(g.ang); }
+      ctx.fillStyle=ink; ctx.textBaseline='middle'; ctx.font='54px "Times New Roman",serif'; ctx.fillText(g.done?g.alt:g.ch,0,3); ctx.restore();
+    });
+    // 그래프
+    ctx.strokeStyle=soft; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(PV.x-30,PV.y); ctx.lineTo(W-30,PV.y); ctx.moveTo(PV.x,PV.y+30); ctx.lineTo(PV.x,70); ctx.stroke();
+    ctx.fillStyle=soft; ctx.textBaseline='alphabetic'; ctx.font='italic 18px serif'; ctx.fillText('x',W-22,PV.y+22); ctx.fillText('y',PV.x+16,80);
+    ctx.strokeStyle=ink; ctx.lineWidth=7; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(PV.x,PV.y); ctx.lineTo(PV.x+Math.cos(S.th)*PL,PV.y-Math.sin(S.th)*PL); ctx.stroke(); ctx.lineCap='butt';
+    ctx.fillStyle=ink; ctx.font='italic 26px "Times New Roman",serif'; ctx.fillText('f(x) = '+fmtA()+'x',790,130);
+    // 플레이어
+    var p=S.p; ctx.fillStyle=ink; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill();
+    ctx.fillStyle=css('--bg'); ctx.font='italic bold 18px "Times New Roman",serif'; ctx.textBaseline='middle'; ctx.fillText('ε',p.x,p.y+1); ctx.textBaseline='alphabetic';
+  }
+  function tick(ts){
+    if(!active()){ raf=0; return; }
+    var dt=Math.min(0.05,(ts-last)/1000||0); last=ts; if(S&&!S.over) update(dt); draw(); raf=requestAnimationFrame(tick);
+  }
+  function clearKeys(){ Object.keys(keys).forEach(function(k){ delete keys[k]; }); }
+  function open(){ reset(); clearKeys(); showScreen('puzzle'); last=performance.now(); if(!raf) raf=requestAnimationFrame(tick); }
+  function exit(){ showScreen('menu'); }
+  window.addEventListener('keydown',function(e){ if(!active()) return; if(e.code==='Escape'){ exit(); return; } keys[e.code]=true; if(/^(Arrow|Space)/.test(e.code)) e.preventDefault(); },true);
+  window.addEventListener('keyup',function(e){ keys[e.code]=false; });
+  window.addEventListener('blur',clearKeys);
+  document.getElementById('pzExit').addEventListener('click',exit);
+  document.getElementById('pzResBtn').addEventListener('click',exit);
+  document.getElementById('pzReset').addEventListener('click',function(){ reset(); });
+  window.__pz={S:function(){ return S; },upd:function(dt){ update(dt); },keys:keys,open:open};
+
+  /* ---------- 키 번호 입력창 ---------- */
+  var gt=document.createElement('div'); gt.id='pzGate';
+  gt.style.cssText='display:none;position:fixed;left:0;top:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,.6);align-items:center;justify-content:center';
+  gt.innerHTML='<div class="gocard" style="width:min(320px,88vw);background:var(--bg)"><div style="font-weight:700;margin-bottom:12px">키 번호를 입력하세요</div><input id="pzKey" class="authinput" type="text" data-nokp="1" autocomplete="off" autocapitalize="off" placeholder="KEY"><div class="mono" id="pzKeyMsg" style="min-height:1.4em;font-size:12px;color:#d32f2f;margin-bottom:8px"></div><div style="display:flex;gap:8px"><button class="btn" id="pzKeyOk" style="flex:1">확인</button><button class="btn ghost" id="pzKeyNo" style="flex:1">취소</button></div></div>';
+  document.body.appendChild(gt);
+  ['keydown','keyup'].forEach(function(t){ gt.addEventListener(t,function(e){ e.stopPropagation(); }); });
+  function gate(){ document.getElementById('pzKey').value=''; document.getElementById('pzKeyMsg').textContent=''; gt.style.display='flex'; setTimeout(function(){ document.getElementById('pzKey').focus(); },50); }
+  function gateOk(){ if(document.getElementById('pzKey').value.trim()===DLC_KEY){ gt.style.display='none'; open(); } else document.getElementById('pzKeyMsg').textContent='키 번호가 올바르지 않습니다.'; }
+  document.getElementById('pzKeyOk').addEventListener('click',gateOk);
+  document.getElementById('pzKeyNo').addEventListener('click',function(){ gt.style.display='none'; });
+  document.getElementById('pzKey').addEventListener('keydown',function(e){ if(e.key==='Enter') gateOk(); if(e.key==='Escape') gt.style.display='none'; });
+
+  /* ---------- 스테이지 탭: BASIC | ADVANCED | DLC ---------- */
+  var dlcTab=false, _rmD=renderMenu;
+  renderMenu=function(){
+    _rmD();
+    var tabs=document.getElementById('stageTabs'), list=document.getElementById('stageList'); if(!tabs||!list) return;
+    var un=dlcUnlocked(), note;
+    Array.prototype.forEach.call(tabs.querySelectorAll('button'),function(bt){ var old=bt.onclick; bt.onclick=function(){ dlcTab=false; old.call(this); }; if(dlcTab) bt.className='btn ghost'; });
+    var db=document.createElement('button'); db.className='btn'+(dlcTab?'':' ghost'); db.style.flex='1'; db.style.fontSize='12px'; db.textContent=(un?'🧩 ':'🔒 ')+'DLC 스테이지';
+    db.onclick=function(){ if(!un){ document.getElementById('dlcNote').textContent='🔒 STAGE 10을 클리어하면 열립니다.'; return; } dlcTab=true; renderMenu(); };
+    tabs.appendChild(db);
+    note=document.getElementById('dlcNote'); if(!note){ note=document.createElement('div'); note.id='dlcNote'; note.className='mono'; note.style.cssText='font-size:12px;min-height:16px;margin:-4px 0 8px'; tabs.parentNode.insertBefore(note,list); } note.textContent='';
+    var box=document.getElementById('dlcList'); if(!box){ box=document.createElement('div'); box.id='dlcList'; list.parentNode.insertBefore(box,list.nextSibling); }
+    if(dlcTab&&un){
+      Array.prototype.forEach.call(list.children,function(c){ c.style.display='none'; });
+      var got=!!(meta.dlc&&meta.dlc.eps1&&meta.dlc.eps1.hidden);
+      box.innerHTML=''; var card=document.createElement('div'); card.className='stagecard'; card.style.cursor='pointer';
+      card.innerHTML='<div class="mono" style="font-size:11px;opacity:.7">DLC 1 · PUZZLE</div><div style="font-size:17px;font-weight:700;margin:4px 0">이상한 나라의 엡실론</div><div style="font-size:12px;opacity:.75">몸으로 밀어 돌려서 수식을 만족시키세요.</div>'+(got?'<div class="mono" style="font-size:11px;margin-top:6px">✦ 히든 가호 획득</div>':'');
+      card.onclick=gate; box.appendChild(card); box.style.display='block';
+    } else box.style.display='none';
+  };
 })();
 
 /* ===================== CLOUD (Supabase): 로그인 · 클라우드 세이브 · 랭킹 ===================== */
