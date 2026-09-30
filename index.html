@@ -332,6 +332,7 @@ button{font-family:inherit;}
         <button class="btn ghost" id="gotoStudy">공부</button>
       </div>
       <button class="btn ghost" id="gotoRank" style="margin-top:10px;">🏆 랭킹</button>
+      <button class="btn ghost" id="gotoSettings" style="margin-top:10px;">⚙ 설정 (키 · 조이스틱 · 키패드)</button>
       <button class="btn ghost" id="resetDataBtn" style="margin-top:10px;">현재 계정 데이터 초기화</button>
     </div>
   </div>
@@ -415,7 +416,8 @@ button{font-family:inherit;}
         <div class="cq mono" id="chQ">?</div>
         <div class="cbuf mono" id="chBuf">&nbsp;</div>
         <div class="timerbar"><i id="chTimer"></i></div>
-        <div class="chHint mono">숫자 · − · <b>R = √</b> (예: 3√2 → 3r2) · Enter 제출</div>
+        <div class="chHint mono">숫자 · − · <b>√</b> 버튼 또는 <b>R</b> (예: 3√2) · Enter 제출</div>
+        <div class="numpad" id="chPad"></div>
       </div>
 
       <div class="hud-bottom">
@@ -445,11 +447,23 @@ button{font-family:inherit;}
     </div>
   </div>
 
+  <div class="screen" id="screen-settings">
+    <div class="wrap">
+      <div class="brand"><h1>⚙ 설정</h1><p>이 기기에만 저장됩니다</p></div>
+      <label class="setrow"><input type="checkbox" id="setJoy"> 가상 조이스틱 + 대시·궁극기 버튼 (터치 화면용)</label>
+      <label class="setrow"><input type="checkbox" id="setPad"> 숫자 키패드 (입력창을 누르면 표시 · - √ 포함)</label>
+      <div class="brand" style="margin-top:14px"><p>키를 바꾸려면 버튼을 누른 뒤 원하는 키를 누르세요 (Esc = 취소). 방향키는 항상 이동에 사용됩니다.</p></div>
+      <div id="keyList"></div>
+      <button class="btn ghost" id="keyReset" style="margin-top:12px;">키 기본값으로</button>
+      <button class="btn ghost" id="setBack" style="margin-top:10px;">메뉴로</button>
+    </div>
+  </div>
+
   <div class="screen" id="screen-rank">
     <div class="wrap">
       <div class="brand"><h1>🏆 랭킹</h1><p>HARD 클리어 기록은 서버가 측정한 실제 소요 시간 (짧을수록 상위)</p></div>
       <div id="rankTabs">
-        <button data-b="hard14">HARD 14 시간</button><button data-b="hard15">HARD 15 시간</button><button data-b="endless">무한 포인트</button>
+        <button data-b="hard14">HARD 14 시간</button><button data-b="hard15">HARD 15 시간</button><button data-b="endless">무한 포인트</button><button data-b="progress">진행도</button>
       </div>
       <div id="rankList" class="mono"></div>
       <button class="btn ghost" id="rankBack" style="margin-top:14px;">메뉴로</button>
@@ -459,6 +473,7 @@ button{font-family:inherit;}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
 <script>
 (function(){
 "use strict";
@@ -986,7 +1001,7 @@ function renderSkillBar(){
   G.loadout.forEach(function(slot, i){
     var div=document.createElement('div');
     div.className='skicon'+(slot? '':' empty');
-    div.innerHTML = '<span class="key">'+(i+1)+'</span>'+
+    div.innerHTML = '<span class="key">'+KB.label('s'+(i+1))+'</span>'+
       (slot? ('<span class="pz">'+(slot.sk.pause?'⏸':'')+'</span><span class="nm">'+slot.sk.name+'</span><div class="cd" data-i="'+i+'"></div>') : '<span class="nm">-</span>');
     if(slot){ div.addEventListener('click', function(){ tryActivate(i); }); }
     bar.appendChild(div);
@@ -1001,17 +1016,18 @@ window.addEventListener('keydown', function(e){
 
   if(G.challenge){
     if(/^[0-9]$/.test(k)){ challengeAppend(k); return; }
-    if(e.code==='KeyR'){ challengeAppend('√'); return; }
+    if(KB.act(e)==='sqrt'){ challengeAppend('√'); return; }
     if(k==='-'){ challengeToggleSign(); return; }
     if(k==='Backspace'){ challengeBackspace(); return; }
     if(k==='Enter'){ challengeSubmit(); return; }
   } else {
-    if(k>='1' && k<='4'){ tryActivate(k.charCodeAt(0)-'1'.charCodeAt(0)); return; }
+    var _a=KB.act(e); if(_a&&_a.length===2&&_a.charAt(0)==='s'){ tryActivate(+_a.charAt(1)-1); return; }
   }
+  k=KB.canon(e,k);
   keys[k.length===1? k.toLowerCase(): k] = true;
 });
 window.addEventListener('keyup', function(e){
-  var k=e.key;
+  var k=KB.canon(e,e.key);
   keys[k.length===1? k.toLowerCase(): k] = false;
 });
 
@@ -1060,7 +1076,7 @@ function openBossQuiz(){
 function renderPad(){
   var pad=document.getElementById('chPad'); if(!pad) return;
   pad.innerHTML='';
-  var keysArr=['7','8','9','4','5','6','1','2','3','-','0','⌫'];
+  var keysArr=['7','8','9','4','5','6','1','2','3','-','0','⌫','√'];
   keysArr.forEach(function(k){
     var b=document.createElement('button');
     b.textContent=k;
@@ -1072,7 +1088,7 @@ function renderPad(){
     pad.appendChild(b);
   });
   var go=document.createElement('button');
-  go.textContent='확인 (Enter)'; go.className='go'; go.style.gridColumn='span 3';
+  go.textContent='확인 (Enter)'; go.className='go'; go.style.gridColumn='span 2';
   go.addEventListener('click', challengeSubmit);
   pad.appendChild(go);
 }
@@ -1375,6 +1391,7 @@ function update(dt){
   if(keys['s']||keys['ArrowDown']) iy+=1;
   if(keys['a']||keys['ArrowLeft']) ix-=1;
   if(keys['d']||keys['ArrowRight']) ix+=1;
+  if(JOY.active){ ix=JOY.x; iy=JOY.y; }
   var ilen=Math.hypot(ix,iy);
   if(ilen>0){ ix/=ilen; iy/=ilen; p.faceDir={x:ix,y:iy}; p.moving=true; } else { p.moving=false; }
 
@@ -2447,7 +2464,7 @@ function buildTab(){
   document.body.appendChild(tab);
 }
 window.addEventListener('keydown',function(e){ if(tabOpen){ e.stopPropagation(); if(e.key==='Enter') tabSubmit(); } },true);
-window.addEventListener('keydown',function(e){ if(e.key==='5'&&G&&G.running&&!G.challenge&&!G.freeze&&!cx().eps) useUlt(); });
+window.addEventListener('keydown',function(e){ if(KB.act(e)==='ult'&&!(e.target&&/^(INPUT|TEXTAREA)$/.test(e.target.tagName))&&G&&G.running&&!G.challenge&&!G.freeze&&!cx().eps) useUlt(); });
 function tabNewQ(){
   var body=document.getElementById('utBody');
   if(tS.mode==='primes'){ var nums=[],pr=[],co=[],i; for(i=2;i<=97;i++) (isPrime(i)?pr:co).push(i);
@@ -3801,8 +3818,164 @@ adminFill();
 
 })();
 
+/* ===================== INPUT EXTRAS: 키 바꾸기 · 가상 조이스틱 · 숫자 키패드 ===================== */
+var KB=(function(){
+  var DEF={up:'KeyW',down:'KeyS',left:'KeyA',right:'KeyD',dash:'Space',s1:'Digit1',s2:'Digit2',s3:'Digit3',s4:'Digit4',ult:'Digit5',sqrt:'KeyR'};
+  var CAN={up:'w',down:'s',left:'a',right:'d',dash:' ',s1:'1',s2:'2',s3:'3',s4:'4',ult:'5',sqrt:'√'};
+  var NAME={up:'위로 이동',down:'아래로 이동',left:'왼쪽 이동',right:'오른쪽 이동',dash:'대시',s1:'스킬 1',s2:'스킬 2',s3:'스킬 3',s4:'스킬 4',ult:'궁극기',sqrt:'√ 입력 (퀴즈)'};
+  var ORDER=['up','down','left','right','dash','s1','s2','s3','s4','ult','sqrt'];
+  var cfg={bind:{},joy:null,pad:null}, KEY='eclipsilon_settings_v1';
+  try{ var s=JSON.parse(localStorage.getItem(KEY)||'{}'); if(s.bind&&typeof s.bind==='object') cfg.bind=s.bind; cfg.joy=s.joy; cfg.pad=s.pad; }catch(e){}
+  var coarse=false; try{ coarse=window.matchMedia('(pointer:coarse)').matches; }catch(e){}
+  if(cfg.joy===null||cfg.joy===undefined) cfg.joy=coarse;
+  if(cfg.pad===null||cfg.pad===undefined) cfg.pad=true;
+  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(cfg)); }catch(e){} }
+  function cur(a){ return cfg.bind[a]||DEF[a]; }
+  function code(e){ var c=e.code||''; if(/^Numpad\d$/.test(c)) c='Digit'+c.slice(6); return c; }
+  function act(e){ var c=code(e); for(var i=0;i<ORDER.length;i++) if(cur(ORDER[i])===c) return ORDER[i]; return null; }
+  function blocked(e){ var c=code(e); for(var i=0;i<ORDER.length;i++){ var a=ORDER[i]; if(cfg.bind[a]&&DEF[a]===c&&cur(a)!==c) return !act(e); } return false; }
+  function canon(e,k){ var a=act(e); if(a) return CAN[a]; if(blocked(e)) return '\u0000'; return k; }
+  function label(a){ var c=cur(a); if(/^Key/.test(c)) return c.slice(3); if(/^Digit/.test(c)) return c.slice(5); var m={Space:'SPACE',ArrowUp:'↑',ArrowDown:'↓',ArrowLeft:'←',ArrowRight:'→',ShiftLeft:'L-SHIFT',ShiftRight:'R-SHIFT'}; return m[c]||c; }
+  function set(a,c){ for(var i=0;i<ORDER.length;i++){ var o=ORDER[i]; if(o!==a&&cur(o)===c) cfg.bind[o]=cur(a); } cfg.bind[a]=c; save(); }
+  function reset(){ cfg.bind={}; save(); }
+  return {cfg:cfg,DEF:DEF,NAME:NAME,ORDER:ORDER,cur:cur,act:act,canon:canon,label:label,set:set,reset:reset,save:save};
+})();
+
+/* --- 가상 조이스틱 + 터치 버튼 --- */
+var JOY={active:false,x:0,y:0};
+(function(){
+  var css=document.createElement('style');
+  css.textContent='#joyBase{position:fixed;left:22px;bottom:96px;width:130px;height:130px;border-radius:50%;border:2px solid var(--ink);background:rgba(128,128,128,.18);z-index:60;touch-action:none;display:none}'
+  +'#joyKnob{position:absolute;left:35px;top:35px;width:60px;height:60px;border-radius:50%;background:var(--ink);opacity:.55;pointer-events:none}'
+  +'#touchBtns{position:fixed;right:18px;bottom:96px;z-index:60;display:none;flex-direction:column;gap:12px}'
+  +'#touchBtns button{width:74px;height:74px;border-radius:50%;border:2px solid var(--ink);background:rgba(128,128,128,.25);color:var(--ink);font-weight:700;font-size:13px;font-family:inherit;touch-action:none}'
+  +'#kpad{position:fixed;left:50%;bottom:8px;transform:translateX(-50%);z-index:99999;display:none;grid-template-columns:repeat(3,68px);gap:6px;padding:8px;background:var(--bg);border:2px solid var(--ink);box-shadow:0 4px 18px rgba(0,0,0,.35)}'
+  +'#kpad button{height:48px;font-weight:700;font-size:20px;font-family:inherit;border:2px solid var(--ink);background:var(--card-bg,var(--bg));color:var(--ink)}#kpad button:disabled{opacity:.25}'
+  +'.setrow{display:flex;align-items:center;gap:10px;padding:10px;border-bottom:1px solid var(--line);font-size:14px}.setrow button{margin-left:auto;min-width:96px;padding:6px 10px;border:2px solid var(--ink);background:transparent;color:var(--ink);font:inherit;cursor:pointer}';
+  document.head.appendChild(css);
+  var base=document.createElement('div'); base.id='joyBase'; base.innerHTML='<div id="joyKnob"></div>'; document.body.appendChild(base);
+  var tb=document.createElement('div'); tb.id='touchBtns'; tb.innerHTML='<button id="tbUlt">ULT</button><button id="tbDash">DASH</button>'; document.body.appendChild(tb);
+  var knob=base.firstChild, pid=null;
+  function move(e){ var r=base.getBoundingClientRect(), R=r.width/2, dx=e.clientX-(r.left+R), dy=e.clientY-(r.top+R), d=Math.hypot(dx,dy)||1, m=Math.min(d,R*0.8);
+    knob.style.transform='translate('+(dx/d*m)+'px,'+(dy/d*m)+'px)'; var k=Math.min(d/(R*0.8),1);
+    JOY.x=dx/d*k; JOY.y=dy/d*k; JOY.active=d>R*0.18; }
+  base.addEventListener('pointerdown',function(e){ e.preventDefault(); pid=e.pointerId; try{ base.setPointerCapture(pid); }catch(x){} move(e); });
+  base.addEventListener('pointermove',function(e){ if(e.pointerId===pid) move(e); });
+  function up(e){ if(e.pointerId!==pid) return; pid=null; JOY.active=false; JOY.x=JOY.y=0; knob.style.transform=''; }
+  base.addEventListener('pointerup',up); base.addEventListener('pointercancel',up);
+  function fire(type,a,key){ window.dispatchEvent(new KeyboardEvent(type,{code:KB.cur(a),key:key,bubbles:true})); }
+  var d=document.getElementById('tbDash'), u=document.getElementById('tbUlt');
+  d.addEventListener('pointerdown',function(e){ e.preventDefault(); fire('keydown','dash',' '); });
+  ['pointerup','pointercancel','pointerleave'].forEach(function(t){ d.addEventListener(t,function(){ fire('keyup','dash',' '); }); });
+  u.addEventListener('pointerdown',function(e){ e.preventDefault(); fire('keydown','ult','5'); fire('keyup','ult','5'); });
+  setInterval(function(){
+    var g=document.getElementById('screen-game'), on=!!(KB.cfg.joy&&g&&g.classList.contains('active'));
+    base.style.display=on?'block':'none'; tb.style.display=on?'flex':'none';
+    if(!on&&JOY.active){ JOY.active=false; JOY.x=JOY.y=0; }
+  },300);
+})();
+
+/* --- 숫자 키패드 (입력창을 누르면 뜸: 0-9 · - · . · √ · ⌫ · ↵) --- */
+(function(){
+  var kp=document.createElement('div'); kp.id='kpad';
+  ['7','8','9','4','5','6','1','2','3','-','0','.','√','⌫','↵'].forEach(function(k){
+    var b=document.createElement('button'); b.type='button'; b.textContent=k; b.setAttribute('data-k',k);
+    b.addEventListener('pointerdown',function(e){ e.preventDefault(); press(k); });
+    b.addEventListener('mousedown',function(e){ e.preventDefault(); });
+    kp.appendChild(b);
+  });
+  document.body.appendChild(kp);
+  var tgt=null;
+  function ok(t){ return t&&t.tagName==='INPUT'&&(t.type==='number'||t.type==='text')&&t.id!=='authId'&&t.id!=='authPw'; }
+  function press(k){
+    var t=tgt; if(!t||!document.body.contains(t)) return;
+    if(k==='↵'){ t.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',code:'Enter',bubbles:true})); return; }
+    if(k==='⌫') t.value=t.value.slice(0,-1);
+    else if(k==='-') t.value=(t.value===''?'-':(t.value.charAt(0)==='-'?t.value.slice(1):'-'+t.value));
+    else t.value+=k;
+    t.dispatchEvent(new Event('input',{bubbles:true}));
+  }
+  document.addEventListener('focusin',function(e){
+    var t=e.target; if(!KB.cfg.pad||!ok(t)) return;
+    if(t.type==='number'){ t.dataset.wasNum='1'; t.type='text'; t.focus(); }
+    t.setAttribute('inputmode','none'); tgt=t; kp.style.display='grid';
+    var s=kp.querySelector('[data-k="√"]'); if(s) s.disabled=!!t.dataset.wasNum;
+  });
+  document.addEventListener('focusout',function(){ setTimeout(function(){ if(!ok(document.activeElement)){ kp.style.display='none'; tgt=null; } },150); });
+})();
+
+/* --- 설정 화면 --- */
+(function(){
+  var wait=null;
+  function render(){
+    var list=document.getElementById('keyList'); list.textContent='';
+    KB.ORDER.forEach(function(a){
+      var row=document.createElement('div'); row.className='setrow';
+      var n=document.createElement('span'); n.textContent=KB.NAME[a];
+      var b=document.createElement('button'); b.textContent=(wait===a)?'아무 키나 누르세요…':KB.label(a);
+      b.addEventListener('click',function(){ wait=a; render(); });
+      row.appendChild(n); row.appendChild(b); list.appendChild(row);
+    });
+    document.getElementById('setJoy').checked=!!KB.cfg.joy; document.getElementById('setPad').checked=!!KB.cfg.pad;
+  }
+  window.addEventListener('keydown',function(e){
+    if(!wait) return; e.preventDefault(); e.stopPropagation();
+    if(e.code!=='Escape'&&e.code) KB.set(wait,(/^Numpad\d$/.test(e.code)?'Digit'+e.code.slice(6):e.code));
+    wait=null; render();
+  },true);
+  document.getElementById('setJoy').addEventListener('change',function(){ KB.cfg.joy=this.checked; KB.save(); });
+  document.getElementById('setPad').addEventListener('change',function(){ KB.cfg.pad=this.checked; KB.save(); });
+  document.getElementById('keyReset').addEventListener('click',function(){ KB.reset(); wait=null; render(); });
+  document.getElementById('gotoSettings').addEventListener('click',function(){ showScreen('settings'); });
+  document.getElementById('setBack').addEventListener('click',function(){ wait=null; showScreen('menu'); });
+  var _ssSet=showScreen; showScreen=function(n){ _ssSet.apply(this,arguments); if(n==='settings'){ wait=null; render(); } };
+})();
+
+/* ===================== 개발자 과자 사주기 (후원) ===================== */
+(function(){
+  var ACC='토스 1908-3321-6303', NUM='1908-3321-6303';
+  var cfg=window.ECLIPSILON_CONFIG||{}, sup=Array.isArray(cfg.supporters)?cfg.supporters:[];
+  var css=document.createElement('style');
+  css.textContent='#donTabs{display:flex;gap:6px;margin:14px 0}#donTabs button{flex:1;padding:10px 4px;border:2px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:14px;cursor:pointer}#donTabs button.on{background:var(--ink);color:var(--bg)}'
+   +'.donacc{font-size:24px;font-weight:700;letter-spacing:.04em;margin:10px 0 14px;word-break:break-all}';
+  document.head.appendChild(css);
+  var scr=document.createElement('div'); scr.className='screen'; scr.id='screen-donate';
+  scr.innerHTML='<div class="wrap"><div class="brand"><h1>☕ 개발자 과자 사주기</h1><p>재미있게 즐기셨다면 작은 응원을 보내주세요. 큰 힘이 됩니다!</p></div>'
+   +'<div id="donTabs"><button data-t="pay" class="on">후원하기</button><button data-t="list">후원자</button></div>'
+   +'<div id="donPay"><div class="gocard"><div class="mono" style="font-size:12px;opacity:.7">계좌번호</div><div class="donacc mono" id="donAcc"></div>'
+   +'<button class="btn" id="donCopy">계좌번호 복사</button><div class="mono" id="donMsg" style="min-height:1.4em;margin-top:10px;font-size:13px"></div></div></div>'
+   +'<div id="donList" style="display:none"></div>'
+   +'<button class="btn ghost" id="donBack" style="margin-top:14px">돌아가기</button></div>';
+  document.getElementById('screen-lobby').parentNode.appendChild(scr);
+  document.getElementById('donAcc').textContent=ACC;
+  var msg=document.getElementById('donMsg');
+  function copy(){
+    function ok(){ msg.textContent='✅ 계좌번호가 복사됐어요: '+NUM; }
+    function fb(){ var t=document.createElement('textarea'); t.value=NUM; t.style.cssText='position:fixed;opacity:0'; document.body.appendChild(t); t.select(); try{ document.execCommand('copy'); ok(); }catch(e){ msg.textContent='길게 눌러 복사해 주세요: '+NUM; } document.body.removeChild(t); }
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(NUM).then(ok,fb); else fb();
+  }
+  function tab(t){
+    document.querySelectorAll('#donTabs button').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-t')===t); });
+    document.getElementById('donPay').style.display=(t==='pay')?'block':'none';
+    document.getElementById('donList').style.display=(t==='list')?'block':'none';
+    if(t==='list'){
+      var box=document.getElementById('donList'); box.textContent='';
+      if(!sup.length){ var e=document.createElement('div'); e.className='mono'; e.style.cssText='padding:20px;text-align:center;opacity:.7'; e.textContent='첫 번째 후원자가 되어보세요! ☕'; box.appendChild(e); return; }
+      sup.forEach(function(n,i){ var r=document.createElement('div'); r.className='rankrow'; r.style.gridTemplateColumns='44px 1fr';
+        var a=document.createElement('span'); a.textContent='☕'; var b=document.createElement('span'); b.textContent=String(n); r.appendChild(a); r.appendChild(b); box.appendChild(r); });
+    }
+  }
+  document.querySelectorAll('#donTabs button').forEach(function(b){ b.addEventListener('click',function(){ tab(b.getAttribute('data-t')); }); });
+  document.getElementById('donCopy').addEventListener('click',copy);
+  document.getElementById('donBack').addEventListener('click',function(){ showScreen('lobby'); });
+  var btn=document.getElementById('lobbyStart'), d=document.createElement('button');
+  d.className='btn ghost'; d.id='lobbyDonate'; d.style.marginTop='10px'; d.textContent='☕ 개발자 과자 사주기';
+  btn.parentNode.insertBefore(d,btn.nextSibling);
+  d.addEventListener('click',function(e){ e.stopPropagation(); showScreen('donate'); tab('pay'); copy(); });
+})();
+
 /* ===================== CLOUD (Supabase): 로그인 · 클라우드 세이브 · 랭킹 ===================== */
-var SB_URL='https://qnbdezfmvkmugtdpfuwk.supabase.co', SB_KEY='sb_publishable_duj7CGw3iqSJP42OQewmgQ_pEbgq0dm';
+var _cfg=window.ECLIPSILON_CONFIG||{}, SB_URL=String(_cfg.url||'PASTE_SUPABASE_URL').replace(/\s+/g,''), SB_KEY=String(_cfg.key||'PASTE_SUPABASE_KEY').replace(/\s+/g,'');
 var sb=null; try{ if(window.supabase && SB_URL.indexOf('http')===0) sb=window.supabase.createClient(SB_URL,SB_KEY); }catch(e){}
 window.__isAdmin=false; window.__uid=null;
 window.__cloud={on:!!sb};
@@ -3813,13 +3986,13 @@ var rankTab='hard14', RANK_PTS={endless:1};
   al.parentNode.insertBefore(st,al.nextSibling);
   setInterval(function(){
     var t;
-    if(!sb) t=(SB_URL.indexOf('PASTE')===0)?'⚠ 서버 미연결 — index.html에 URL/키를 넣지 않았습니다 (로컬 모드)':(!window.supabase?'⚠ 서버 미연결 — Supabase 라이브러리 로드 실패 (로컬 모드)':'⚠ 서버 미연결 — URL 형식 오류 (로컬 모드)');
+    if(!sb) t=(SB_URL.indexOf('PASTE')===0)?'⚠ 서버 미연결 — config.js 에 URL/키가 없습니다 (로컬 모드)':(!window.supabase?'⚠ 서버 미연결 — Supabase 라이브러리 로드 실패 (로컬 모드)':'⚠ 서버 미연결 — URL 형식 오류 (로컬 모드)');
     else if(!window.__uid) t='☁ 서버 연결됨 · 로그인 필요 (계정 관리)';
     else t='☁ 서버 연결됨 · '+(window.__isAdmin?'🛡 관리자 계정':'일반 계정 (관리자 아님)');
     st.textContent=t;
   },700);
 })();
-function rankFmt(b,v){ if(RANK_PTS[b]) return Math.round(v).toLocaleString()+' P'; var s=v/1000,m=Math.floor(s/60),r=s-m*60; return m+':'+(r<10?'0':'')+r.toFixed(2); }
+function rankFmt(b,v){ if(b==='progress') return v+' / '+STAGES.length+' 스테이지'; if(RANK_PTS[b]) return Math.round(v).toLocaleString()+' P'; var s=v/1000,m=Math.floor(s/60),r=s-m*60; return m+':'+(r<10?'0':'')+r.toFixed(2); }
 function setRankMsg(t){ var e=document.getElementById('goRankMsg'); if(e) e.textContent=t; }
 
 if(sb){
@@ -3838,7 +4011,13 @@ if(sb){
     localStorage.setItem(CURRENT_KEY,name);
     var sv=await sb.from('saves').select('data').eq('user_id',user.id).maybeSingle();
     if(sv.data&&sv.data.data){ meta=normalizeMeta(sv.data.data); try{ localStorage.setItem(storageKeyFor(name),JSON.stringify(meta)); }catch(e){} }
-    else { meta=loadMeta(name); cloudPush(); }          // 클라우드 세이브가 없으면 이 기기의 로컬 세이브를 올린다
+    else { meta=loadMeta(name); cloudPush(); }
+    reportProgress();          // 클라우드 세이브가 없으면 이 기기의 로컬 세이브를 올린다
+  };
+  var reportProgress=function(){
+    if(!window.__uid||isAdmin()) return;
+    var n=Object.keys(meta.clearedStages||{}).filter(function(k){ return meta.clearedStages[k]; }).length;
+    if(n>0) sb.rpc('report_progress',{p_count:n}).then(function(){},function(){});
   };
   var cloudPush=async function(){
     if(!window.__uid||pushing) return; pushing=true;
@@ -3898,7 +4077,7 @@ if(sb){
     }).catch(function(e){ setRankMsg('랭킹 등록 실패: '+e.message); });
   };
   var _erRank=endRun;
-  endRun=function(win){ var g=G; _erRank.apply(this,arguments); setRankMsg(''); if(g&&G===g&&!g.running) rankSubmit(g,!!win); };
+  endRun=function(win){ var g=G; _erRank.apply(this,arguments); setRankMsg(''); if(win) setTimeout(reportProgress,600); if(g&&G===g&&!g.running) rankSubmit(g,!!win); };
   document.addEventListener('click',function(e){
     if(e.target&&e.target.id==='quitBtn'&&G&&G.running&&G.rankBoard==='endless') rankSubmit(G,false);
   },true);
