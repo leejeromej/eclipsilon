@@ -3982,23 +3982,27 @@ var JOY={active:false,x:0,y:0};
 /* ===================== DLC 1 · 이상한 나라의 엡실론 (퍼즐) ===================== */
 (function(){
   var DLC_KEY='hello';                       // ← 테스트용 키 번호 (나중에 바꾸거나 제거)
-  var W=960,H=540, PV={x:600,y:420}, PL=330, TH_MAX=Math.atan(408), TH_MIN=0.03;
+  var W=960,H=540, PV={x:620,y:410}, PL=300, A_MAX=999;
   var _nmD=normalizeMeta; normalizeMeta=function(m){ var d=_nmD(m); d.dlc=(m&&m.dlc&&typeof m.dlc==='object')?m.dlc:{}; return d; };
   function dlcUnlocked(){ return isAdmin()||!!(meta&&meta.clearedStages&&meta.clearedStages[10]); }
 
   /* ---------- 화면 ---------- */
   var scr=document.createElement('div'); scr.className='screen'; scr.id='screen-puzzle';
+  var B='padding:7px 14px;font-size:12px;width:auto;white-space:nowrap';
   scr.innerHTML='<canvas id="pzCv" style="position:absolute;left:0;top:0;width:100%;height:100%;touch-action:none"></canvas>'
-   +'<div style="position:absolute;right:10px;top:10px;display:flex;gap:8px;z-index:5"><button class="btn ghost" id="pzReset" style="padding:6px 12px;font-size:12px;width:auto;white-space:nowrap">↺ 초기화</button><button class="btn ghost" id="pzExit" style="padding:6px 12px;font-size:12px;width:auto;white-space:nowrap">나가기</button></div>'
-   +'<div id="pzResult" style="display:none;position:absolute;left:0;top:0;right:0;bottom:0;z-index:6;background:rgba(0,0,0,.55);align-items:center;justify-content:center"><div class="gocard" style="max-width:360px;margin:16px;background:var(--bg)"><h2 id="pzResT" style="margin:0 0 10px"></h2><div id="pzResD" style="margin-bottom:14px;line-height:1.5"></div><button class="btn" id="pzResBtn">나가기</button></div></div>';
+   +'<div style="position:absolute;right:14px;top:12px;display:flex;gap:8px;z-index:5"><button class="btn ghost" id="pzReset" style="'+B+'">↺ 초기화</button><button class="btn ghost" id="pzExit" style="'+B+'">나가기</button></div>'
+   +'<div id="pzToast" class="mono" style="position:absolute;left:50%;bottom:76px;transform:translateX(-50%);z-index:5;display:none;padding:8px 16px;background:var(--ink);color:var(--bg);font-size:13px;white-space:nowrap"></div>'
+   +'<button class="btn" id="pzSubmit" style="position:absolute;right:18px;bottom:18px;z-index:5;width:auto;padding:12px 34px;font-size:15px;letter-spacing:.08em">제출</button>'
+   +'<div id="pzResult" style="display:none;position:absolute;left:0;top:0;right:0;bottom:0;z-index:6;background:rgba(0,0,0,.55);align-items:center;justify-content:center"><div class="gocard" style="max-width:360px;margin:16px;background:var(--bg)"><h2 id="pzResT" style="margin:0 0 10px"></h2><div id="pzResD" style="margin-bottom:14px;line-height:1.6"></div><button class="btn" id="pzResBtn">나가기</button></div></div>';
   document.getElementById('screen-lobby').parentNode.appendChild(scr);
-  var cv=document.getElementById('pzCv'), ctx=cv.getContext('2d'), S=null, raf=0, last=0, keys={};
+  var cv=document.getElementById('pzCv'), ctx=cv.getContext('2d'), S=null, raf=0, last=0, keys={}, toastT=0;
   function active(){ return scr.classList.contains('active'); }
   function css(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim()||'#111'; }
+  function toast(t){ var e=document.getElementById('pzToast'); e.textContent=t; e.style.display='block'; clearTimeout(toastT); toastT=setTimeout(function(){ e.style.display='none'; },2200); }
 
   function reset(){
-    S={p:{x:330,y:430,r:14},th:Math.atan(1),over:false,
-       g:[{ch:'1',alt:'−',x:218,y:281,r:26,ang:0,done:false},{ch:'8',alt:'∞',x:385,y:250,r:30,ang:0,done:false}]};
+    S={p:{x:330,y:420,r:14,vx:0},a:1,aF:1,pt:0,pdir:0,cool:0,over:false,
+       g:[{k:'bar',x:218,y:281,r:24,degF:0,deg:0},{k:'8',x:385,y:250,r:30,degF:0,deg:0}]};
     document.getElementById('pzResult').style.display='none';
   }
   function down(a,alt){ return !!(keys[KB.cur(a)]||keys[alt]); }
@@ -4008,28 +4012,35 @@ var JOY={active:false,x:0,y:0};
     if(JOY.active){ ix=JOY.x; iy=JOY.y; }
     var l=Math.hypot(ix,iy); if(l>1){ ix/=l; iy/=l; }
     var ox=p.x, oy=p.y; p.x+=ix*240*dt; p.y+=iy*240*dt;
-    p.x=Math.max(p.r+6,Math.min(W-p.r-6,p.x)); p.y=Math.max(p.r+6,Math.min(H-p.r-6,p.y));
-    var dx=p.x-ox, dy=p.y-oy;
-    S.g.forEach(function(g){                                   // 글자: 몸으로 스치면 돌아간다
+    p.x=Math.max(p.r+22,Math.min(W-p.r-22,p.x)); p.y=Math.max(p.r+60,Math.min(H-p.r-58,p.y));
+    var dx=p.x-ox, dy=p.y-oy; p.vx=dt>0?dx/dt:0;
+    S.g.forEach(function(g){                                   // 글자: 몸으로 스치면 돌아간다 (정수 각도)
       var vx=p.x-g.x, vy=p.y-g.y, d=Math.hypot(vx,vy)||0.001, mn=g.r+p.r;
       if(d<mn){ var nx=vx/d, ny=vy/d; p.x=g.x+nx*mn; p.y=g.y+ny*mn;
-        if(!g.done){ g.ang+=(nx*dy-ny*dx)/g.r*1.1; if(Math.abs(g.ang)>1.05){ g.done=true; g.ang=(g.ang>0?1:-1)*Math.PI/2; } } }
+        g.degF=Math.max(-90,Math.min(90,g.degF+(nx*dy-ny*dx)/g.r*1.1*57.2958)); g.deg=Math.round(g.degF); }
     });
-    var dxl=Math.cos(S.th), dyl=-Math.sin(S.th), rx=p.x-PV.x, ry=p.y-PV.y;   // 그래프: 밀면 기울기가 바뀐다
-    var t=Math.max(0,Math.min(PL,rx*dxl+ry*dyl)), cx=PV.x+dxl*t, cy=PV.y+dyl*t, qx=p.x-cx, qy=p.y-cy, dd=Math.hypot(qx,qy), mn=p.r+4;
+    var th=Math.atan(S.a), dxl=Math.cos(th), dyl=-Math.sin(th), rx=p.x-PV.x, ry=p.y-PV.y;   // 그래프: 밀면 a 가 정수로 바뀐다
+    var t=Math.max(0,Math.min(PL,rx*dxl+ry*dyl)), cx=PV.x+dxl*t, cy=PV.y+dyl*t, qx=p.x-cx, qy=p.y-cy, dd=Math.hypot(qx,qy), mn=p.r+4, hit=false;
     if(dd<mn){ if(dd<0.001){ qx=-dyl; qy=dxl; dd=1; }
-      var nx=qx/dd, ny=qy/dd, pen=mn-dd; p.x=cx+nx*mn; p.y=cy+ny*mn;
-      var s=-(nx*(-Math.sin(S.th))+ny*(-Math.cos(S.th)));
-      S.th+=s*pen/Math.max(t,40)*0.4; }
-    S.th=Math.max(TH_MIN,Math.min(TH_MAX,S.th));
+      var nx=qx/dd, ny=qy/dd; p.x=cx+nx*mn; p.y=cy+ny*mn;
+      var s=-(nx*(-Math.sin(th))+ny*(-Math.cos(th))), dir=Math.abs(s)>0.3?(s>0?1:-1):0;
+      if(dir){ hit=true; if(dir!==S.pdir){ S.pdir=dir; S.pt=0; } S.pt+=dt; S.cool=0.15;
+        S.aF+=dir*2*Math.pow(1+S.pt*3,2.2)*dt; }          // 오래 밀수록 빨라지고, 살짝 톡 치면 1~2씩 (미세 조정)
+    }
+    if(!hit){ S.cool-=dt; if(S.cool<=0){ S.pt=0; S.pdir=0; } }
+    S.aF=Math.max(1,Math.min(A_MAX,S.aF)); S.a=Math.round(S.aF);
+  }
+
+  function submit(){
+    if(!S||S.over) return;
     var g1=S.g[0], g8=S.g[1];
-    if(g1.done&&g8.done) finish('hidden');
-    else if(S.th>=TH_MAX-1e-9&&!g1.done&&!g8.done) finish('fake');
+    if(Math.abs(g1.deg)===90&&Math.abs(g8.deg)===90) finish('hidden');
+    else if(g1.deg===0&&g8.deg===0&&S.a===408) finish('fake');
+    else toast('조건을 만족하지 못했습니다');
   }
   function finish(kind){
     S.over=true; meta.dlc=meta.dlc||{}; var d=meta.dlc.eps1=meta.dlc.eps1||{}, T,D;
-    if(kind==='fake'){ meta.currency+=408; d.fake=(d.fake||0)+1; T='CLEAR?'; D='f(x)=408x 를 만들었습니다.<br><b>히든 조건을 만족하지 못했습니다.</b><br>+408 P';
-      var b=document.getElementById('pzResBtn'); b.textContent='나가기'; }
+    if(kind==='fake'){ meta.currency+=408; d.fake=(d.fake||0)+1; T='CLEAR?'; D='f(x) = 408x<br><b>히든 조건을 만족하지 못했습니다.</b><br>+408 P'; }
     else { var first=!d.hidden; d.hidden=true; T='✦ HIDDEN CLEAR ✦'; D='lim<sub>x→5</sub> f(x)/(5−x) = ∞<br><b>'+(first?'가호를 얻었습니다!':'이미 가호를 얻었습니다.')+'</b><br><span style="font-size:12px;opacity:.7">(가호 효과는 아직 미구현)</span>'; }
     saveMeta();
     document.getElementById('pzResT').textContent=T; document.getElementById('pzResD').innerHTML=D;
@@ -4037,37 +4048,43 @@ var JOY={active:false,x:0,y:0};
   }
 
   /* ---------- 그리기 ---------- */
-  function fmtA(){ var a=Math.tan(S.th); if(S.th>=TH_MAX-1e-9) return '408'; return a<10?a.toFixed(2):(a<100?a.toFixed(1):String(Math.round(a))); }
+  function rr(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  function arrow(x1,y1,x2,y2){ ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); var a=Math.atan2(y2-y1,x2-x1); ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-9*Math.cos(a-.4),y2-9*Math.sin(a-.4)); ctx.lineTo(x2-9*Math.cos(a+.4),y2-9*Math.sin(a+.4)); ctx.closePath(); ctx.fill(); }
+  var SERIF='"Times New Roman",serif';
   function draw(){
     var dpr=window.devicePixelRatio||1, cw=cv.clientWidth, ch=cv.clientHeight;
     if(cv.width!==Math.round(cw*dpr)||cv.height!==Math.round(ch*dpr)){ cv.width=Math.round(cw*dpr); cv.height=Math.round(ch*dpr); }
     ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,cw,ch);
     var s=Math.min(cw/W,ch/H); ctx.translate((cw-W*s)/2,(ch-H*s)/2); ctx.scale(s,s);
-    var ink=css('--ink'), soft=css('--ink-soft');
-    ctx.fillStyle='rgba(128,128,128,.08)'; ctx.fillRect(0,0,W,H); ctx.strokeStyle=ink; ctx.lineWidth=6; ctx.strokeRect(3,3,W-6,H-6);
-    ctx.setLineDash([8,8]); ctx.lineWidth=2; ctx.strokeStyle=soft; ctx.beginPath(); ctx.moveTo(470,50); ctx.lineTo(470,470); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle=ink; ctx.textAlign='center'; ctx.font='bold 18px monospace'; ctx.fillText('DLC 1 · 이상한 나라의 엡실론',W/2,34);
-    ctx.font='16px sans-serif'; ctx.fillStyle=soft; ctx.fillText('몸으로 밀어 돌려서 수식을 만족시키세요',W/2,H-18);
+    var ink=css('--ink'), soft=css('--ink-soft'), tn=performance.now()/1000;
+    ctx.fillStyle='rgba(128,128,128,.07)'; rr(8,8,W-16,H-16,20); ctx.fill(); ctx.strokeStyle=ink; ctx.globalAlpha=.55; ctx.lineWidth=2; ctx.stroke(); ctx.globalAlpha=1;
+    ctx.textBaseline='alphabetic'; ctx.textAlign='left'; ctx.fillStyle=soft; ctx.font='600 12px "JetBrains Mono",monospace'; ctx.fillText('DLC 1  ·  이상한 나라의 엡실론',38,44);
+    ctx.textAlign='center'; ctx.font='15px "Space Grotesk",sans-serif'; ctx.fillText('몸으로 밀어 돌려서 수식을 만족시키세요',W/2,H-34);
     // 수식
-    ctx.fillStyle=ink; ctx.font='44px "Times New Roman",serif'; ctx.textAlign='left'; ctx.fillText('lim',52,268);
-    ctx.font='20px "Times New Roman",serif'; ctx.fillText('x → 5',52,296);
-    ctx.textAlign='center'; ctx.font='italic 50px "Times New Roman",serif'; ctx.fillText('f(x)',218,232);
-    ctx.fillRect(150,244,136,3);
-    ctx.font='54px "Times New Roman",serif'; ctx.fillText('5',178,300); ctx.font='italic 54px "Times New Roman",serif'; ctx.fillText('x',258,300);
-    ctx.font='54px "Times New Roman",serif'; ctx.fillText('=',318,268);
+    ctx.fillStyle=ink; ctx.textAlign='left'; ctx.font='44px '+SERIF; ctx.fillText('lim',56,268);
+    ctx.font='20px '+SERIF; ctx.fillText('x → 5',56,296);
+    ctx.textAlign='center'; ctx.font='italic 50px '+SERIF; ctx.fillText('f(x)',218,232);
+    ctx.fillRect(150,244,136,2.5);
+    ctx.font='54px '+SERIF; ctx.fillText('5',178,300); ctx.font='italic 54px '+SERIF; ctx.fillText('x',258,300);
+    ctx.font='54px '+SERIF; ctx.fillText('=',318,268);
     S.g.forEach(function(g){
-      ctx.save(); ctx.translate(g.x,g.y);
-      if(!g.done){ ctx.setLineDash([4,6]); ctx.strokeStyle=soft; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(0,0,g.r,0,7); ctx.stroke(); ctx.setLineDash([]); ctx.rotate(g.ang); }
-      ctx.fillStyle=ink; ctx.textBaseline='middle'; ctx.font='54px "Times New Roman",serif'; ctx.fillText(g.done?g.alt:g.ch,0,3); ctx.restore();
+      ctx.save(); ctx.translate(g.x,g.y); ctx.fillStyle=ink;
+      if(g.k==='bar'){ ctx.rotate(g.deg*Math.PI/180); rr(-2.6,-19,5.2,38,2.6); ctx.fill(); }          // 1 = 돌리면 − 가 되는 막대
+      else if(Math.abs(g.deg)===90){ ctx.textBaseline='middle'; ctx.font='54px '+SERIF; ctx.fillText('∞',0,3); }
+      else { ctx.rotate(g.deg*Math.PI/180); ctx.textBaseline='middle'; ctx.font='54px '+SERIF; ctx.fillText('8',0,3); }
+      ctx.restore();
     });
     // 그래프
-    ctx.strokeStyle=soft; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(PV.x-30,PV.y); ctx.lineTo(W-30,PV.y); ctx.moveTo(PV.x,PV.y+30); ctx.lineTo(PV.x,70); ctx.stroke();
-    ctx.fillStyle=soft; ctx.textBaseline='alphabetic'; ctx.font='italic 18px serif'; ctx.fillText('x',W-22,PV.y+22); ctx.fillText('y',PV.x+16,80);
-    ctx.strokeStyle=ink; ctx.lineWidth=7; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(PV.x,PV.y); ctx.lineTo(PV.x+Math.cos(S.th)*PL,PV.y-Math.sin(S.th)*PL); ctx.stroke(); ctx.lineCap='butt';
-    ctx.fillStyle=ink; ctx.font='italic 26px "Times New Roman",serif'; ctx.fillText('f(x) = '+fmtA()+'x',790,130);
-    // 플레이어
-    var p=S.p; ctx.fillStyle=ink; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,7); ctx.fill();
-    ctx.fillStyle=css('--bg'); ctx.font='italic bold 18px "Times New Roman",serif'; ctx.textBaseline='middle'; ctx.fillText('ε',p.x,p.y+1); ctx.textBaseline='alphabetic';
+    ctx.strokeStyle=soft; ctx.fillStyle=soft; ctx.lineWidth=1.5;
+    arrow(PV.x-34,PV.y,W-44,PV.y); arrow(PV.x,PV.y+34,PV.x,78);
+    ctx.textBaseline='alphabetic'; ctx.font='italic 17px '+SERIF; ctx.textAlign='center'; ctx.fillText('x',W-40,PV.y+22); ctx.fillText('y',PV.x+15,88);
+    var th=Math.atan(S.a); ctx.strokeStyle=ink; ctx.lineWidth=5; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(PV.x,PV.y); ctx.lineTo(PV.x+Math.cos(th)*PL,PV.y-Math.sin(th)*PL); ctx.stroke(); ctx.lineCap='butt';
+    ctx.fillStyle=ink; ctx.beginPath(); ctx.arc(PV.x,PV.y,4,0,7); ctx.fill();
+    ctx.textAlign='left'; ctx.font='italic 28px '+SERIF; ctx.fillText('f(x) = '+S.a+'x',735,140);
+    // 플레이어 (본편과 동일한 ε)
+    var p=S.p, moving=Math.abs(p.vx)>1||S.pt>0, br=moving?1+Math.sin(tn*10)*.06:1+Math.sin(tn*2)*.025;
+    ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(Math.max(-1,Math.min(1,p.vx/235))*.22); ctx.scale(br,br);
+    ctx.fillStyle=ink; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font='bold 34px "JetBrains Mono",monospace'; ctx.fillText('ε',0,0); ctx.restore();
   }
   function tick(ts){
     if(!active()){ raf=0; return; }
@@ -4076,13 +4093,14 @@ var JOY={active:false,x:0,y:0};
   function clearKeys(){ Object.keys(keys).forEach(function(k){ delete keys[k]; }); }
   function open(){ reset(); clearKeys(); showScreen('puzzle'); last=performance.now(); if(!raf) raf=requestAnimationFrame(tick); }
   function exit(){ showScreen('menu'); }
-  window.addEventListener('keydown',function(e){ if(!active()) return; if(e.code==='Escape'){ exit(); return; } keys[e.code]=true; if(/^(Arrow|Space)/.test(e.code)) e.preventDefault(); },true);
+  window.addEventListener('keydown',function(e){ if(!active()) return; if(e.code==='Escape'){ exit(); return; } if(e.code==='Enter'){ submit(); return; } keys[e.code]=true; if(/^(Arrow|Space)/.test(e.code)) e.preventDefault(); },true);
   window.addEventListener('keyup',function(e){ keys[e.code]=false; });
   window.addEventListener('blur',clearKeys);
   document.getElementById('pzExit').addEventListener('click',exit);
   document.getElementById('pzResBtn').addEventListener('click',exit);
   document.getElementById('pzReset').addEventListener('click',function(){ reset(); });
-  window.__pz={S:function(){ return S; },upd:function(dt){ update(dt); },keys:keys,open:open};
+  document.getElementById('pzSubmit').addEventListener('click',submit);
+  window.__pz={S:function(){ return S; },upd:function(dt){ update(dt); },keys:keys,open:open,submit:submit};
 
   /* ---------- 키 번호 입력창 ---------- */
   var gt=document.createElement('div'); gt.id='pzGate';
