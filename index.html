@@ -3802,8 +3802,7 @@ adminFill();
 })();
 
 /* ===================== CLOUD (Supabase): 로그인 · 클라우드 세이브 · 랭킹 ===================== */
-var SB_URL='https://qnbdezfmvkmugtdpfuwk.supabase.co
-', SB_KEY='sb_publishable_duj7CGw3iqSJP42OQewmgQ_pEbgq0dm';
+var SB_URL='https://qnbdezfmvkmugtdpfuwk.supabase.co', SB_KEY='sb_publishable_duj7CGw3iqSJP42OQewmgQ_pEbgq0dm';
 var sb=null; try{ if(window.supabase && SB_URL.indexOf('http')===0) sb=window.supabase.createClient(SB_URL,SB_KEY); }catch(e){}
 window.__isAdmin=false; window.__uid=null;
 window.__cloud={on:!!sb};
