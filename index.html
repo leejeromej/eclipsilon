@@ -494,6 +494,7 @@ button{font-family:inherit;}
 ============================================================ */
 function rnd(n){ return Math.floor(Math.random()*n); }
 function randInt(min,max){ return min+Math.floor(Math.random()*(max-min+1)); }
+var AW_NERF=0.6, AW_LOWTIER={E:1,D:1,C:1,B:1,A:1}, AW_HARDCAP=0.5, AW_SRC=false;   /* 각성 너프 설정 — 여러 구역에서 함께 쓰므로 바깥 범위에 선언 */
 /* ---------------- 효과음 (Web Audio · 파일 없음) ---------------- */
 var SFX=(function(){
   var ctx=null, on=true, last={};
@@ -1995,8 +1996,8 @@ AW.exphyp={gen:function(){
 },
   fire:function(sk,d,c){ var p=G.player; nova(120+c.a*35,d*(1+c.a*0.3)); later(300,function(){ nova(160+c.a*40,d*(0.7+c.a*0.2)); });
    spawnFloat(p.x,p.y-44,'e^(ln '+c.a+') = '+c.a+' → 반경 '+(120+c.a*35)); }};
-var AW_NERF=0.6; /* S급 미만(E·D·C·B·A) 각성 스킬 데미지 40% 너프 — S 이상은 원래 데미지 */
-var AW_LOWTIER={E:1,D:1,C:1,B:1,A:1}, AW_HARDCAP=0.5, AW_SRC=false; /* 하드 스테이지: S 미만 각성은 1타에 몬스터 최대체력의 50%까지만 */
+AW_NERF=0.6; /* S급 미만(E·D·C·B·A) 각성 스킬 데미지 40% 너프 — S 이상은 원래 데미지 */
+AW_LOWTIER={E:1,D:1,C:1,B:1,A:1}; AW_HARDCAP=0.5; /* 하드 스테이지: S 미만 각성은 1타에 몬스터 최대체력의 50%까지만 */
 function awLow(sk){ return !!(sk&&AW_LOWTIER[sk.tier]); }
 function runAwLow(fn){
   var oL=later, oS=safeLater;
