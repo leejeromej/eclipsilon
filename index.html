@@ -173,6 +173,12 @@ button{font-family:inherit;}
 .challenge .ctitle{font-size:11px;color:var(--ink-soft);margin-bottom:6px;}
 .challenge .cq{font-size:17px;white-space:pre-line;text-align:center;margin-bottom:8px;line-height:1.4;}
 .mathq{font-family:'Times New Roman','Cambria Math',serif;font-size:21px;letter-spacing:.01em;line-height:1.55;} .mathq .frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;line-height:1.05;margin:0 3px;} .mathq .frac>span:first-child{border-bottom:1px solid currentColor;padding:0 3px;} .mathq sup{font-size:.68em;} .mathq sub{font-size:.68em;} .mathq .root{font-size:1.08em;}
+.mx{display:inline-block;vertical-align:middle;margin:6px 10px;padding:3px 14px;position:relative;line-height:1.25;}
+.mx::before,.mx::after{content:'';position:absolute;top:0;bottom:0;width:9px;border:2.5px solid currentColor;}
+.mx::before{left:0;border-right:none;} .mx::after{right:0;border-left:none;}
+.mx.dm::before,.mx.dm::after{width:0;border-top:none;border-bottom:none;}
+.mx table{border-collapse:separate;border-spacing:0;display:inline-table;}
+.mx td{padding:4px 13px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:.95em;font-weight:500;min-width:1.8em;white-space:nowrap;}
 .challenge .cbuf{
   text-align:center;font-size:19px;font-weight:700;border:1px solid var(--ink-faint);
   background:var(--card-bg-2);padding:6px;margin-bottom:8px;min-height:28px;
@@ -246,6 +252,8 @@ button{font-family:inherit;}
 .lobby-start{min-width:230px;font-size:16px;letter-spacing:.2em;padding:15px 26px;}
 .lobby-center #lobbyStats{justify-content:center;margin:26px 0 8px;}
 .lobby-tip{font-size:11.5px;color:var(--ink-soft);min-height:16px;transition:opacity .3s;}
+.lobby-credit{margin-top:18px;display:inline-block;padding:7px 16px;border:1.5px solid var(--line);font-size:13px;letter-spacing:.06em;color:var(--ink);background:var(--card-bg);}
+.lobby-credit b{font-weight:700;}
 .lobby-foot{position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:10.5px;color:var(--ink-faint);z-index:1;letter-spacing:.1em;}
 /* in-game */
 #hpVig{position:fixed;inset:0;pointer-events:none;z-index:6;opacity:0;transition:opacity .3s;box-shadow:inset 0 0 130px 30px var(--ink);}
@@ -300,6 +308,7 @@ button{font-family:inherit;}
       <button class="btn lobby-start" id="lobbyStart">시작하기 ▶</button>
       <div class="mono" id="lobbyStats"></div>
       <div class="lobby-tip mono" id="lobbyTip"></div>
+      <div class="lobby-credit mono">제작 및 문의 · <b>@2m.nze</b></div>
     </div>
     <div class="lobby-foot mono">ECLIPSILON v3.0 · ACCOUNT : <span id="lobbyAcc"></span></div>
   </div>
@@ -614,7 +623,7 @@ function chainGen(lv){
 function matrixGen(lv){
   var a=randInt(-6,7), b=randInt(-6,7), c=randInt(-6,7), d=randInt(-6,7);
   var det=a*d-b*c;
-  return {q:'A = ['+a+'  '+b+'\\n     '+c+'  '+d+']\\ndet(A) = ?', a:det};
+  return {q:'A = \\matrix{'+a+' '+b+' ; '+c+' '+d+'}\ndet(A) = ?', a:det};
 }
 function limitGen(lv){
   var a=randInt(2,6), n=Math.random()<0.5?2:3;
@@ -630,7 +639,7 @@ function partialGen(lv){
 function eigenGen(lv){
   var l1=randInt(2,8), l2=randInt(-4,5), b=randInt(-5,5);
   var tr=l1+l2, det=l1*l2;
-  return {q:'A = ['+l1+'  '+b+'\\n      0  '+l2+']\n고유값의 합은?', a:tr};
+  return {q:'A = \\matrix{'+l1+' '+b+' ; 0 '+l2+'}\n고유값의 합은?', a:tr};
 }
 function optimizeGenHard(lv){
   var v=rnd(lv>=4?6:5);
@@ -639,7 +648,7 @@ function optimizeGenHard(lv){
   if(v===1){ var x0=pick([-6,-5,-4,-3,-2,-1,1,2,3,4,5,6]),y0=pick([-6,-5,-4,-3,-2,-1,1,2,3,4,5,6]),pp=2*x0+y0,qq=x0+2*y0;
     return {q:'f(x,y)=x'+sup(2)+' + xy + y'+sup(2)+' '+fmtSigned(-pp)+'x '+fmtSigned(-qq)+'y\n임계점 (x₀, y₀) 에서 x₀ · y₀ 의 값은?', a:x0*y0}; }
   if(v===2){ var kk=pick([1,3,4,5,6]);
-    return {q:'f(x,y)=x'+sup(2)+' + '+(kk===1?'':kk)+'xy + y'+sup(2)+'\n헤시안 행렬식 f_xx·f_yy − (f_xy)² 의 값은?', a:4-kk*kk}; }
+    return {q:'f(x,y)=x'+sup(2)+' + '+(kk===1?'':kk)+'xy + y'+sup(2)+'\n헤시안 행렬식 f_{xx}·f_{yy} − (f_{xy})² 의 값은?', a:4-kk*kk}; }
   if(v===3){ var S=pick([6,8,10,12,14,16,18,20]);
     return {q:'x + y = '+S+' 일 때, xy 의 최댓값은? (라그랑주 승수법)', a:S*S/4}; }
   if(v===4){ var kk2=randInt(2,9);
@@ -1033,8 +1042,9 @@ window.addEventListener('keyup', function(e){
 
 /* ---------------- challenge ---------------- */
 function escapeHTML(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function mxConv(s){ return s.replace(/\\(d?)matrix\{([^{}]*)\}/g,function(_,d,b){ return '<span class="mx'+(d?' dm':'')+'"><table>'+b.split(';').map(function(r){ return '<tr>'+r.trim().split(/\s+/).map(function(c){ return '<td>'+c.replace(/^-/,'\u2212')+'</td>'; }).join('')+'</tr>'; }).join('')+'</table></span>'; }); }
 function mathHTML(raw){
-  var s=escapeHTML(raw);
+  var s=mxConv(escapeHTML(raw));
   s=s.replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g,'<span class="frac"><span>$1</span><span>$2</span></span>');
   s=s.replace(/\\sqrt\{([^{}]*)\}/g,'√<span class="root">$1</span>');
   s=s.replace(/\\(sin|cos|tan|log|ln|lim|exp)/g,'<span style="font-style:normal">$1</span>');
@@ -2908,7 +2918,7 @@ var OQ={
  lim:function(){ var t=rnd(3),a,b,m; if(t===0){ a=randInt(2,9); return {q:'lim x→'+a+'  (x² − '+(a*a)+') / (x − '+a+')  의 값은?',a:2*a}; }
    if(t===1){ a=randInt(2,9); return {q:'lim x→0  sin('+a+'x) / x  의 값은?',a:a}; }
    b=randInt(2,4); m=randInt(2,5); return {q:'lim x→∞  ('+(b*m)+'x² + 3) / ('+b+'x² + 1)  의 값은?',a:m}; },
- det:function(){ var a,b,c,d; do{ a=randInt(2,9); b=randInt(2,9); c=randInt(2,9); d=randInt(2,9); }while(a*d===b*c); return {q:'| '+a+' '+b+' ; '+c+' '+d+' | 의 행렬식은?',a:a*d-b*c}; },
+ det:function(){ var a,b,c,d; do{ a=randInt(2,9); b=randInt(2,9); c=randInt(2,9); d=randInt(2,9); }while(a*d===b*c); return {q:'\\dmatrix{'+a+' '+b+' ; '+c+' '+d+'}\n위 행렬식의 값은?',a:a*d-b*c}; },
  euler:function(){ var n=pick([4,8,12]); return {q:'(1 + i)^'+n+' 의 실수부는?',a:Math.pow(-4,n/4)}; },
  demo:function(){ return deMoivreGen(); }
 };
@@ -3187,7 +3197,7 @@ SKILL_POOL.push({id:'diagonal',tier:'L',secret:true,name:'칸토어 대각선 �
   study:'칸토어의 대각선 논법: 실수는 자연수와 일대일 대응할 수 없다. 목록의 n번째 수의 n번째 자리를 바꿔 목록에 없는 새로운 수를 만든다.',
   kind:'diagonal',baseDmg:230,cd:24000,win:11000,pause:true,gen:function(lv){
     if(rnd(2)===0){ var n=randInt(4,15); return {q:'n × n 표에서 주대각선 칸의 개수가 '+n+' 일 때\n표의 전체 칸 수는?',a:n*n}; }
-    var a=randInt(1,9),e=randInt(1,9),i=randInt(1,9); return {q:'A = [ '+a+' 3 5 ; 2 '+e+' 7 ; 4 6 '+i+' ] 일 때\n주대각선 원소의 합(대각합)은?',a:a+e+i}; }});
+    var a=randInt(1,9),e=randInt(1,9),i=randInt(1,9); return {q:'A = \\matrix{'+a+' 3 5 ; 2 '+e+' 7 ; 4 6 '+i+'}\n주대각선 원소의 합(대각합)은?',a:a+e+i}; }});
 var _fsD=fireSkill;
 fireSkill=function(sk,lv){
   if(sk.kind==='diagonal'){
@@ -3316,7 +3326,7 @@ var BOSS_QUIZ_CONCEPTS={
   omega15:[
     {n:'집합의 연산',f:'|P(A)|=2^|A|, |A∪B|=|A|+|B|−|A∩B|, |A×B|=|A|·|B|'},
     {n:'극한 lim',f:'lim(x→a) (x²−a²)/(x−a) = 2a,  lim(x→0) sin(ax)/x = a'},
-    {n:'행렬식',f:'| a b ; c d | = ad − bc'},
+    {n:'행렬식',f:'\\dmatrix{a b ; c d} = ad − bc'},
     {n:'오일러 공식 · 드무아브르',f:'e^(iπ)+1=0, (cosθ+i sinθ)ⁿ = cos nθ + i sin nθ'}
   ]
 };
@@ -3345,7 +3355,7 @@ renderLoadout=function(){
   box.style.display='';
   document.getElementById('bossPrepToggle').textContent='▶ 보스 퀴즈 예습';
   var body2=document.getElementById('bossPrepBody'); body2.style.display='none';
-  body2.innerHTML=list.map(function(c){ return '<div style="margin-bottom:6px;"><b>'+c.n+'</b><br>'+c.f+'</div>'; }).join('');
+  body2.innerHTML=list.map(function(c){ return '<div style="margin-bottom:6px;"><b>'+c.n+'</b><br>'+mxConv(c.f)+'</div>'; }).join('');
 };
 
 /* ---------- 3) 미구현 각성 스킬 전부 추가 ---------- */
@@ -3365,7 +3375,7 @@ AW.chain={gen:function(){ var a=pick([-6,-5,-4,-3,-2,-1,1,2,3,4,5,6]),b=pick([-6
     for(i=0;i<n;i++)(function(i){ safeLater(i*150,function(){ rayStrike(G.player.x,G.player.y,a0+(i-(n-1)/2)*0.3,620,34,d*1.5,null,6); }); })(i);
     spawnFloat(px,py-44,'f′g′='+c.a+' → 연쇄 광선 '+n+'줄기'); }};
 
-AW.matrix={gen:function(){ var a=randInt(-6,6),b=randInt(-6,6),cc=randInt(-6,6),dd=randInt(-6,6); return {q:'행렬 [ '+a+' '+b+' ; '+cc+' '+dd+' ] 의 행렬식 ad−bc 값은?',a:a*dd-b*cc}; },
+AW.matrix={gen:function(){ var a=randInt(-6,6),b=randInt(-6,6),cc=randInt(-6,6),dd=randInt(-6,6); return {q:'A = \\matrix{'+a+' '+b+' ; '+cc+' '+dd+'}\n행렬식 ad−bc 의 값은?',a:a*dd-b*cc}; },
   fire:function(sk,d,c){ var p=G.player,px=p.x,py=p.y,n=Math.min(5,2+Math.floor(Math.abs(c.a)/8)),i;
     for(i=-n;i<=n;i++){ lineStrike(px+i*70,py-680,px+i*70,py+680,26,d*1.1,null,6); lineStrike(px-680,py+i*70,px+680,py+i*70,26,d*1.1,null,6); }
     spawnFloat(px,py-44,'det='+c.a+' → '+(2*n+1)+'×'+(2*n+1)+' 격자 절단'); }};
@@ -3381,7 +3391,7 @@ AW.partial={gen:function(){ var a=randInt(-6,6),b=randInt(1,5),y0=randInt(-4,4);
     if(c.a!==0) safeLater(200,function(){ blast(px,py,220,d*1.6); });
     spawnFloat(px,py-44,'∂f/∂y='+c.a+' → x·y축 교차 절단'); }};
 
-AW.eigen={gen:function(){ var a=randInt(-6,6),dd=randInt(-6,6); return {q:'삼각행렬 [ '+a+' 3 ; 0 '+dd+' ] 의 두 고유값의 합 λ₁+λ₂ 는?',a:a+dd}; },
+AW.eigen={gen:function(){ var a=randInt(-6,6),dd=randInt(-6,6); return {q:'A = \\matrix{'+a+' 3 ; 0 '+dd+'}\n삼각행렬의 두 고유값의 합 λ₁+λ₂ 는?',a:a+dd}; },
   fire:function(sk,d,c){ var p=G.player,px=p.x,py=p.y;
     pullIn(px,py,480,0.55); safeLater(280,function(){ blast(px,py,260,d*3.0); });
     spawnFloat(px,py-44,'λ합 '+c.a+' → 고유공간 압축 폭발'); }};
@@ -3677,9 +3687,9 @@ update=function(dt){ _upX(dt);
     gen:function(){ var n=R(2,4),a=R(1,3),b=nz(-3,3),k=R(1,2),u=a*k+b;
       return {q:'f(x)=('+a+'x '+sg(b)+')^'+n+' 일 때 f′('+k+') 는?',a:n*a*Math.pow(u,n-1),s:'f′(x)='+n+'('+a+'x '+sg(b)+')^'+(n-1)+'·'+a+'\nx='+k+' → 안쪽 값='+u+'\nf′('+k+')='+n+'·'+Math.pow(u,n-1)+'·'+a+'='+n*a*Math.pow(u,n-1)}; }},
    matrix:{how:'2×2 행렬 [[a,b],[c,d]] 의 행렬식은 ad−bc. 행렬식이 0이면 역행렬이 없고, |det|는 선형변환이 넓이를 몇 배로 바꾸는지를 나타냅니다.',
-    ex:{q:'A=[[2,3],[1,4]] 의 행렬식은?',s:'det A=2·4−3·1=5'},
+    ex:{q:'A = \\matrix{2 3 ; 1 4}\n행렬식은?',s:'det A=2·4−3·1=5'},
     gen:function(){ var a=R(-5,5),b=R(-5,5),c=R(-5,5),d=R(-5,5);
-      return {q:'A=[['+a+','+b+'],['+c+','+d+']] 의 행렬식은?',a:a*d-b*c,s:'det A=ad−bc=('+a+')('+d+')−('+b+')('+c+')='+a*d+' − ('+b*c+') = '+(a*d-b*c)}; }},
+      return {q:'A = \\matrix{'+a+' '+b+' ; '+c+' '+d+'}\n행렬식은?',a:a*d-b*c,s:'det A=ad−bc=('+a+')('+d+')−('+b+')('+c+')='+a*d+' − ('+b*c+') = '+(a*d-b*c)}; }},
    trigderiv:{how:'(sin ax)′=a·cos ax, (cos ax)′=−a·sin ax (합성함수 미분). x=0 을 대입하면 sin0=0, cos0=1.',
     ex:{q:'f(x)=3sin(2x) 일 때 f′(0) 은?',s:'f′(x)=3·2cos(2x)=6cos2x\nf′(0)=6·1=6'},
     gen:function(){ var a=nz(-4,4),b=R(1,4);
@@ -3697,9 +3707,9 @@ update=function(dt){ _upX(dt);
     gen:function(){ var a=R(1,4),b=nz(-3,3),p=R(1,3),q=R(1,3);
       return {q:'f(x,y)='+a+'x²y '+sg(b)+'y² 일 때 ∂f/∂y 의 ('+p+','+q+')에서의 값은?',a:a*p*p+2*b*q,s:'∂f/∂y='+a+'x² '+sg(2*b)+'y\n('+p+','+q+') 대입: '+a*p*p+' '+sg(2*b*q)+' = '+(a*p*p+2*b*q)}; }},
    eigen:{how:'det(A−λI)=0 의 해가 고유값. 삼각행렬의 고유값은 대각 성분입니다. 고유값의 합=대각합(trace), 곱=행렬식.',
-    ex:{q:'A=[[3,1],[0,5]] 의 두 고유값의 곱은?',s:'삼각행렬 → 고유값은 3, 5\n곱=15 (=det A)'},
+    ex:{q:'A = \\matrix{3 1 ; 0 5}\n두 고유값의 곱은?',s:'삼각행렬 → 고유값은 3, 5\n곱=15 (=det A)'},
     gen:function(){ var a=R(-4,6),d=R(-4,6),b=R(-5,5);
-      return {q:'A=[['+a+','+b+'],[0,'+d+']] 의 두 고유값의 곱은?',a:a*d,s:'상삼각행렬 → 고유값은 대각 성분 '+a+', '+d+'\n곱='+a*d+' (=det A)'}; }},
+      return {q:'A = \\matrix{'+a+' '+b+' ; 0 '+d+'}\n두 고유값의 곱은?',a:a*d,s:'상삼각행렬 → 고유값은 대각 성분 '+a+', '+d+'\n곱='+a*d+' (=det A)'}; }},
    optimize:{how:'극값 후보는 f′(x)=0 인 점. 이차함수 ax²+bx+c (a>0)의 최솟값은 x=−b/2a 에서 c−b²/4a 입니다.',
     ex:{q:'f(x)=x²−6x+11 의 최솟값은?',s:'꼭짓점 x=3\nf(3)=9−18+11=2'},
     gen:function(){ var h=R(-4,5),m=R(-6,9), b=-2*h, c=h*h+m;
@@ -3717,7 +3727,7 @@ update=function(dt){ _upX(dt);
     gen:function(){ var th=pick([30,45,60,90,120]), n; do{ n=R(2,12); }while((n*th)%90!==0); var ph=(n*th)%360, a=Math.round(Math.cos(ph*Math.PI/180)), b=Math.round(Math.sin(ph*Math.PI/180));
       return {q:'z=cos'+th+'°+i·sin'+th+'° 일 때 z'+n+' 을 a+bi 로 쓰면 2a+3b 는?',a:2*a+3*b,s:'z^'+n+'=cos'+n*th+'°+i·sin'+n*th+'° (='+ph+'°)\na='+a+', b='+b+' → 2a+3b='+(2*a+3*b)}; }}
   };
-  function H(t){ return String(t).replace(/\n/g,'<br>'); }
+  function H(t){ return mxConv(String(t)).replace(/\n/g,'<br>'); }
   var _rs9=renderStudy;
   renderStudy=function(){ _rs9();
     var box=document.getElementById('studyList'); if(!box) return;
@@ -3946,10 +3956,15 @@ var JOY={active:false,x:0,y:0};
   document.head.appendChild(css);
   var scr=document.createElement('div'); scr.className='screen'; scr.id='screen-donate';
   scr.innerHTML='<div class="wrap"><div class="brand"><h1>☕ 개발자 과자 사주기</h1><p>재미있게 즐기셨다면 작은 응원을 보내주세요. 큰 힘이 됩니다!</p></div>'
-   +'<div id="donTabs"><button data-t="pay" class="on">후원하기</button><button data-t="list">후원자</button></div>'
+   +'<div id="donTabs"><button data-t="pay" class="on">후원하기</button><button data-t="list">후원자</button><button data-t="proof">후원인증하기</button></div>'
    +'<div id="donPay"><div class="gocard"><div class="mono" style="font-size:12px;opacity:.7">계좌번호</div><div class="donacc mono" id="donAcc"></div>'
    +'<button class="btn" id="donCopy">계좌번호 복사</button><div class="mono" id="donMsg" style="min-height:1.4em;margin-top:10px;font-size:13px"></div></div></div>'
    +'<div id="donList" style="display:none"></div>'
+   +'<div id="donProof" style="display:none"><div class="gocard"><div style="font-weight:700;margin-bottom:6px">후원 인증하기</div><div style="font-size:12px;opacity:.75;line-height:1.6;margin-bottom:10px">실명·닉네임 중 하나만 입력해 주세요(둘 다 써도 되고, 둘 다 필수는 아니에요). 송금 사진(캡처)도 같이 보낼 수 있어요. 확인 후 후원자 목록에 올려드릴게요.</div>'
+   +'<input id="prName" class="authinput" data-nokp="1" placeholder="실명 (닉네임과 둘 중 하나)" maxlength="20" autocomplete="off"><input id="prNick" class="authinput" data-nokp="1" placeholder="닉네임 (실명과 둘 중 하나)" maxlength="20" autocomplete="off">'
+   +'<input type="file" id="prImg" accept="image/*" style="margin:6px 0 10px;font-size:12px;max-width:100%"><img id="prPrev" alt="" style="display:none;max-width:100%;max-height:200px;margin-bottom:10px;border:1px solid var(--line)">'
+   +'<button class="btn" id="prSend">보내기</button><div class="mono" id="prMsg" style="min-height:1.4em;margin-top:10px;font-size:13px"></div></div>'
+   +'<div id="prAdmin" style="display:none;margin-top:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>📥 받은 후원 인증 (관리자)</b><button class="btn ghost" id="prReload" style="width:auto;padding:5px 12px;font-size:12px">새로고침</button></div><div id="prAdminList" class="mono" style="font-size:12px"></div></div></div>'
    +'<button class="btn ghost" id="donBack" style="margin-top:14px">돌아가기</button></div>';
   document.getElementById('screen-lobby').parentNode.appendChild(scr);
   document.getElementById('donAcc').textContent=ACC;
@@ -3963,6 +3978,7 @@ var JOY={active:false,x:0,y:0};
     document.querySelectorAll('#donTabs button').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-t')===t); });
     document.getElementById('donPay').style.display=(t==='pay')?'block':'none';
     document.getElementById('donList').style.display=(t==='list')?'block':'none';
+    document.getElementById('donProof').style.display=(t==='proof')?'block':'none'; if(t==='proof') adminLoad();
     if(t==='list'){
       var box=document.getElementById('donList'); box.textContent='';
       if(!sup.length){ var e=document.createElement('div'); e.className='mono'; e.style.cssText='padding:20px;text-align:center;opacity:.7'; e.textContent='첫 번째 후원자가 되어보세요! ☕'; box.appendChild(e); return; }
@@ -3970,6 +3986,47 @@ var JOY={active:false,x:0,y:0};
         var a=document.createElement('span'); a.textContent='☕'; var b=document.createElement('span'); b.textContent=String(n); r.appendChild(a); r.appendChild(b); box.appendChild(r); });
     }
   }
+  /* ---- 관리자: 받은 후원 인증 보기 ---- */
+  function adminLoad(){
+    var box=document.getElementById('prAdmin'), list=document.getElementById('prAdminList');
+    if(!isAdmin()){ box.style.display='none'; return; }
+    box.style.display='block'; list.textContent='불러오는 중…';
+    if(typeof sb==='undefined'||!sb){ list.textContent='서버에 연결되어 있지 않습니다.'; return; }
+    sb.from('donor_proofs').select('*').order('created_at',{ascending:false}).limit(100).then(function(r){
+      list.textContent='';
+      if(r.error){ list.textContent='불러오기 실패: '+r.error.message; return; }
+      if(!r.data||!r.data.length){ list.textContent='아직 받은 인증이 없습니다.'; return; }
+      r.data.forEach(function(x){
+        var d=document.createElement('div'); d.style.cssText='border:1.5px solid var(--line);padding:10px;margin-bottom:8px;word-break:break-all';
+        var h=document.createElement('div'); h.style.fontSize='13px'; h.textContent='실명: '+(x.real_name||'-')+'  ·  닉네임: '+(x.nickname||'-'); d.appendChild(h);
+        var t=document.createElement('div'); t.style.cssText='opacity:.6;margin-top:2px'; t.textContent=new Date(x.created_at).toLocaleString(); d.appendChild(t);
+        if(x.photo&&String(x.photo).indexOf('data:image/')===0){ var im=document.createElement('img'); im.src=x.photo; im.style.cssText='max-width:100%;max-height:260px;margin-top:8px;display:block'; d.appendChild(im); }
+        var del=document.createElement('button'); del.className='btn ghost'; del.textContent='삭제'; del.style.cssText='width:auto;padding:4px 12px;font-size:12px;margin-top:8px';
+        del.onclick=function(){ if(confirm('이 인증을 삭제할까요?')) sb.from('donor_proofs').delete().eq('id',x.id).then(adminLoad); };
+        d.appendChild(del); list.appendChild(d);
+      });
+    });
+  }
+  document.getElementById('prReload').addEventListener('click',adminLoad);
+  /* ---- 후원인증하기: 실명/닉네임 중 하나 + 사진(선택) 전송 ---- */
+  var prImg=null;
+  function prSay(t,bad){ var e=document.getElementById('prMsg'); e.textContent=t; e.style.color=bad?'#d32f2f':''; }
+  document.getElementById('prImg').addEventListener('change',function(){
+    var f=this.files&&this.files[0]; prImg=null; document.getElementById('prPrev').style.display='none'; if(!f) return;
+    var r=new FileReader(); r.onload=function(){ var im=new Image(); im.onload=function(){ var k=Math.min(1,900/Math.max(im.width,im.height)), c=document.createElement('canvas'); c.width=Math.round(im.width*k); c.height=Math.round(im.height*k); c.getContext('2d').drawImage(im,0,0,c.width,c.height); prImg=c.toDataURL('image/jpeg',.7); var p=document.getElementById('prPrev'); p.src=prImg; p.style.display='block'; }; im.onerror=function(){ prSay('이미지를 읽을 수 없습니다.',true); }; im.src=r.result; }; r.readAsDataURL(f);
+  });
+  document.getElementById('prSend').addEventListener('click',function(){
+    var nm=document.getElementById('prName').value.trim(), nk=document.getElementById('prNick').value.trim();
+    if(!nm&&!nk){ prSay('실명이나 닉네임 중 하나는 입력해 주세요.',true); return; }
+    if(typeof sb==='undefined'||!sb){ prSay('서버에 연결되어 있지 않아 전송할 수 없습니다.',true); return; }
+    var btn=this; btn.disabled=true; prSay('전송 중…');
+    sb.from('donor_proofs').insert({real_name:nm||null,nickname:nk||null,photo:prImg}).then(function(r){
+      btn.disabled=false;
+      if(r&&r.error){ prSay('전송에 실패했습니다: '+(r.error.message||'오류'),true); return; }
+      prSay('✅ 전송되었습니다! 확인 후 후원자 목록에 올려드릴게요. 감사합니다 ☕');
+      document.getElementById('prName').value=''; document.getElementById('prNick').value=''; document.getElementById('prImg').value=''; document.getElementById('prPrev').style.display='none'; prImg=null;
+    },function(){ btn.disabled=false; prSay('전송에 실패했습니다.',true); });
+  });
   document.querySelectorAll('#donTabs button').forEach(function(b){ b.addEventListener('click',function(){ tab(b.getAttribute('data-t')); }); });
   document.getElementById('donCopy').addEventListener('click',copy);
   document.getElementById('donBack').addEventListener('click',function(){ showScreen('lobby'); });
@@ -4003,7 +4060,7 @@ var JOY={active:false,x:0,y:0};
   function reset(){
     S={p:{x:330,y:420,r:14,vx:0},a:1,aF:1,pt:0,pdir:0,cool:0,over:false,
        g:[{k:'bar',x:218,y:281,r:24,degF:0,deg:0},{k:'8',x:385,y:250,r:30,degF:0,deg:0}]};
-    document.getElementById('pzResult').style.display='none';
+    document.getElementById('pzResult').style.display='none'; document.getElementById('pzResBtn').textContent='나가기';
   }
   function down(a,alt){ return !!(keys[KB.cur(a)]||keys[alt]); }
 
@@ -4041,9 +4098,10 @@ var JOY={active:false,x:0,y:0};
   function finish(kind){
     S.over=true; meta.dlc=meta.dlc||{}; var d=meta.dlc.eps1=meta.dlc.eps1||{}, T,D;
     if(kind==='fake'){ meta.currency+=408; d.fake=(d.fake||0)+1; T='CLEAR?'; D='f(x) = 408x<br><b>히든 조건을 만족하지 못했습니다.</b><br>+408 P'; }
-    else { var first=!d.hidden; d.hidden=true; T='✦ HIDDEN CLEAR ✦'; D='lim<sub>x→5</sub> f(x)/(5−x) = ∞<br><b>'+(first?'가호를 얻었습니다!':'이미 가호를 얻었습니다.')+'</b><br><span style="font-size:12px;opacity:.7">(가호 효과는 아직 미구현)</span>'; }
+    else { S.next=true; var first=!d.hidden; d.hidden=true; T='✦ HIDDEN CLEAR ✦'; D='lim<sub>x→5</sub> f(x)/(5−x) = ∞<br><b>'+(first?'가호를 얻었습니다!':'이미 가호를 얻었습니다.')+'</b><br><span style="font-size:12px;opacity:.7">(가호 효과는 아직 미구현)</span>'; }
     saveMeta();
     document.getElementById('pzResT').textContent=T; document.getElementById('pzResD').innerHTML=D;
+    document.getElementById('pzResBtn').textContent=S.next?'다음 방으로 →':'나가기';
     document.getElementById('pzResult').style.display='flex';
   }
 
@@ -4069,7 +4127,7 @@ var JOY={active:false,x:0,y:0};
     ctx.font='54px '+SERIF; ctx.fillText('=',318,268);
     S.g.forEach(function(g){
       ctx.save(); ctx.translate(g.x,g.y); ctx.fillStyle=ink;
-      if(g.k==='bar'){ ctx.rotate(g.deg*Math.PI/180); rr(-2.6,-19,5.2,38,2.6); ctx.fill(); }          // 1 = 돌리면 − 가 되는 막대
+      if(g.k==='bar'){ ctx.textBaseline='middle'; ctx.font='54px '+SERIF; if(Math.abs(g.deg)===90) ctx.fillText('\u2212',0,3); else { ctx.rotate(g.deg*Math.PI/180); ctx.fillText('1',0,3); } }   // 평범한 1 — 돌려서 90°가 되면 − 
       else if(Math.abs(g.deg)===90){ ctx.textBaseline='middle'; ctx.font='54px '+SERIF; ctx.fillText('∞',0,3); }
       else { ctx.rotate(g.deg*Math.PI/180); ctx.textBaseline='middle'; ctx.font='54px '+SERIF; ctx.fillText('8',0,3); }
       ctx.restore();
@@ -4091,21 +4149,160 @@ var JOY={active:false,x:0,y:0};
     var dt=Math.min(0.05,(ts-last)/1000||0); last=ts; if(S&&!S.over) update(dt); draw(); raf=requestAnimationFrame(tick);
   }
   function clearKeys(){ Object.keys(keys).forEach(function(k){ delete keys[k]; }); }
-  function open(){ reset(); clearKeys(); showScreen('puzzle'); last=performance.now(); if(!raf) raf=requestAnimationFrame(tick); }
+  function open(){ reset(); clearKeys(); showScreen('puzzle'); startRoom(1); last=performance.now(); if(!raf) raf=requestAnimationFrame(tick); }
   function exit(){ showScreen('menu'); }
-  window.addEventListener('keydown',function(e){ if(!active()) return; if(e.code==='Escape'){ exit(); return; } if(e.code==='Enter'){ submit(); return; } keys[e.code]=true; if(/^(Arrow|Space)/.test(e.code)) e.preventDefault(); },true);
+  window.addEventListener('keydown',function(e){ if(!active()) return; if(room>1){ if(e.code==='Escape'&&e.target.tagName!=='INPUT') exit(); return; } if(e.code==='Escape'){ exit(); return; } if(e.code==='Enter'){ submit(); return; } keys[e.code]=true; if(/^(Arrow|Space)/.test(e.code)) e.preventDefault(); },true);
   window.addEventListener('keyup',function(e){ keys[e.code]=false; });
   window.addEventListener('blur',clearKeys);
   document.getElementById('pzExit').addEventListener('click',exit);
-  document.getElementById('pzResBtn').addEventListener('click',exit);
+  document.getElementById('pzResBtn').addEventListener('click',function(){ if(S&&S.next){ document.getElementById('pzResult').style.display='none'; startRoom(2); } else exit(); });
   document.getElementById('pzReset').addEventListener('click',function(){ reset(); });
   document.getElementById('pzSubmit').addEventListener('click',submit);
+
+  /* ===================== ROOM 2 ~ 5 ===================== */
+  var room=1, R=document.createElement('div'); R.id='pzRoom';
+  R.style.cssText='display:none;position:absolute;left:0;top:0;right:0;bottom:0;z-index:4;background:var(--bg);overflow:auto;padding:56px 16px 28px';
+  scr.appendChild(R);
+  ['keydown','keyup'].forEach(function(t){ R.addEventListener(t,function(e){ e.stopPropagation(); }); });
+  function rn(n){ if(window.crypto&&crypto.getRandomValues){ var a=new Uint32Array(1); crypto.getRandomValues(a); return a[0]%n; } return Math.floor(Math.random()*n); }
+  function shf(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=rn(i+1),t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  function $(id){ return document.getElementById(id); }
+  function say(id,t,bad){ var e=$(id); e.textContent=t; e.style.color=bad?'#d32f2f':''; }
+  function shell(n,t,sub,body){ R.innerHTML='<div style="max-width:520px;margin:0 auto"><div class="mono" style="font-size:11px;opacity:.7">DLC 1 · ROOM '+n+' / 5</div><h2 style="margin:4px 0 6px">'+t+'</h2><div style="font-size:13px;opacity:.75;margin-bottom:14px;line-height:1.55">'+sub+'</div>'+body+'</div>'; R.scrollTop=0; }
+  function startRoom(n){
+    room=n; $('pzSubmit').style.display=$('pzReset').style.display=(n===1)?'':'none'; R.style.display=(n===1)?'none':'block';
+    if(n===2) room2(); else if(n===3) room3(); else if(n===4) room4(); else if(n===5) room5();
+  }
+
+  /* ----- ROOM 2 : 5×5 나이트 투어 (ε 가 나이트) ----- */
+  function room2(){
+    var mv=[[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]], path=[12], done=false;
+    shell(2,'엡실론의 순회','정가운데에서 출발합니다. ε 이 나이트처럼 움직여 5×5 의 모든 칸을 한 번씩만 밟으면 다음 방으로 갑니다.',
+      '<div id="kg" style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;max-width:360px;margin:0 auto 12px"></div><div class="mono" id="kst" style="min-height:1.5em;font-size:13px;text-align:center;margin-bottom:10px"></div><div class="btnrow2"><button class="btn ghost" id="kun">↶ 되돌리기</button><button class="btn ghost" id="krs">처음부터</button></div>');
+    function legal(c){ var r=(c/5)|0,q=c%5,o=[]; mv.forEach(function(m){ var a=r+m[0],b=q+m[1]; if(a>=0&&a<5&&b>=0&&b<5&&path.indexOf(a*5+b)<0) o.push(a*5+b); }); return o; }
+    function render(){
+      var cur=path[path.length-1], lg=legal(cur), g=$('kg'); g.innerHTML='';
+      for(var i=0;i<25;i++){ (function(i){
+        var b=document.createElement('button'), vi=path.indexOf(i), isL=lg.indexOf(i)>=0;
+        b.style.cssText='aspect-ratio:1;border:1.5px solid var(--line);font:inherit;font-size:22px;cursor:'+(isL?'pointer':'default')+';color:var(--ink);background:'+(i===cur?'var(--ink)':isL?'rgba(128,128,128,.28)':vi>=0?'rgba(128,128,128,.12)':'var(--bg)');
+        if(i===cur){ b.style.color='var(--bg)'; b.style.fontWeight='700'; b.textContent='ε'; }
+        else if(vi>=0){ b.className='mono'; b.style.fontSize='13px'; b.style.opacity='.6'; b.textContent=vi+1; }
+        else if(isL) b.textContent='·';
+        b.onclick=function(){ if(done||!isL) return; path.push(i); render(); };
+        g.appendChild(b); })(i); }
+      say('kst',path.length+' / 25');
+      if(path.length===25){ done=true; say('kst','✅ 완주! 다음 방으로 이동합니다…'); setTimeout(function(){ startRoom(3); },1000); }
+      else if(!lg.length) say('kst','더 이상 이동할 수 없어요. 되돌리거나 처음부터 다시 하세요.',true);
+    }
+    $('kun').onclick=function(){ if(!done&&path.length>1){ path.pop(); render(); } };
+    $('krs').onclick=function(){ if(!done){ path=[12]; render(); } };
+    render();
+  }
+
+  /* ----- ROOM 3 : 퀸 퍼즐 (6개 배치됨, 좌표 2번 입력) ----- */
+  function room3(){
+    var cols=[]; (function sv(r){ if(r===8) return true; var o=shf([0,1,2,3,4,5,6,7]); for(var k=0;k<8;k++){ var c=o[k],ok=true; for(var j=0;j<r;j++) if(cols[j]===c||Math.abs(cols[j]-c)===r-j){ ok=false; break; } if(ok){ cols[r]=c; if(sv(r+1)) return true; } } return false; })(0);
+    var hid=shf([0,1,2,3,4,5,6,7]).slice(0,2), Q=[], busy=false;
+    for(var r=0;r<8;r++) if(hid.indexOf(r)<0) Q.push({r:r,c:cols[r]});
+    var base=Q.length;
+    shell(3,'여섯 퀸','체스판에 퀸 6개가 놓여 있습니다. 좌표를 2번 입력해 퀸 2개를 더 배치하고, 8개의 퀸이 서로 공격하지 않게 만드세요. (예: e5 또는 5,5 — 열 a~h, 행 1~8)',
+      '<div id="qb" style="display:grid;grid-template-columns:18px repeat(8,1fr);max-width:400px;margin:0 auto 12px;font-size:12px"></div><div class="mono" id="qst" style="min-height:1.5em;font-size:13px;text-align:center;margin-bottom:10px"></div><div style="display:flex;gap:8px"><input id="qin" class="authinput" data-nokp="1" autocomplete="off" autocapitalize="off" placeholder="좌표 (예: e5)" style="flex:1;margin:0"><button class="btn" id="qok" style="width:auto;padding:0 24px">배치</button></div>');
+    function bad(){ var s={}; for(var i=0;i<Q.length;i++) for(var j=i+1;j<Q.length;j++) if(Q[i].r===Q[j].r||Q[i].c===Q[j].c||Math.abs(Q[i].r-Q[j].r)===Math.abs(Q[i].c-Q[j].c)){ s[i]=1; s[j]=1; } return s; }
+    function render(flag){
+      var bd=flag?bad():{}, g=$('qb'), h='';
+      for(var r=7;r>=0;r--){ h+='<div class="mono" style="display:flex;align-items:center;opacity:.6">'+(r+1)+'</div>';
+        for(var c=0;c<8;c++){ var qi=-1; Q.forEach(function(q,i){ if(q.r===r&&q.c===c) qi=i; });
+          h+='<div style="aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:26px;background:'+(((r+c)%2)?'var(--bg)':'rgba(128,128,128,.3)')+';border:1px solid rgba(128,128,128,.4);color:'+(bd[qi]?'#d32f2f':'var(--ink)')+'">'+(qi>=0?(qi>=base?'♛':'♕'):'')+'</div>'; } }
+      h+='<div></div>'; for(var c2=0;c2<8;c2++) h+='<div class="mono" style="text-align:center;opacity:.6">'+String.fromCharCode(97+c2)+'</div>';
+      g.innerHTML=h;
+    }
+    function parse(t){ t=t.trim().toLowerCase(); var m=t.match(/^([a-h])\s*[,\-\s]?\s*([1-8])$/); if(m) return {c:m[1].charCodeAt(0)-97,r:+m[2]-1}; m=t.match(/^([1-8])\s*[,\-\s]\s*([1-8])$/); if(m) return {c:+m[1]-1,r:+m[2]-1}; return null; }
+    function place(){
+      if(busy) return; var p=parse($('qin').value);
+      if(!p){ say('qst','좌표 형식이 올바르지 않습니다. 예: e5',true); return; }
+      if(Q.some(function(q){ return q.r===p.r&&q.c===p.c; })){ say('qst','이미 퀸이 있는 칸입니다.',true); return; }
+      Q.push(p); $('qin').value=''; var n=Q.length-base;
+      if(n<2){ render(); say('qst','퀸 '+n+'/2 배치 완료 — 좌표를 한 번 더 입력하세요.'); return; }
+      busy=true; var ok=Object.keys(bad()).length===0; render(true);
+      if(ok){ say('qst','✅ 성공! 다음 방으로 이동합니다…'); setTimeout(function(){ startRoom(4); },1100); }
+      else { say('qst','❌ 서로 공격하는 퀸이 있어요 (빨강). 잠시 후 다시 시작합니다.',true); setTimeout(function(){ Q.length=base; busy=false; render(); say('qst','좌표를 2번 입력하세요 (0/2)'); },1900); }
+    }
+    $('qok').onclick=place; $('qin').addEventListener('keydown',function(e){ if(e.key==='Enter') place(); });
+    render(); say('qst','좌표를 2번 입력하세요 (0/2)');
+  }
+
+  /* ----- ROOM 4 : 프랙탈 · 하우스도르프 차원 ----- */
+  function gridFr(cells,g,name,dm){ return {name:name,dim:Math.log(cells.length)/Math.log(g),dMax:dm,draw:function(c,w,h,d){ (function rec(x,y,s,k){ if(k===0){ c.fillRect(x,y,Math.max(s,.7),Math.max(s,.7)); return; } cells.forEach(function(q){ rec(x+q[0]*s/g,y+q[1]*s/g,s/g,k-1); }); })(0,0,Math.min(w,h),d); }}; }
+  function turtle(rule,ang,init,N,sc,name,dm){ return {name:name,dim:Math.log(N)/Math.log(sc),dMax:dm,draw:function(c,w,h,d){
+    var str=init; for(var i=0;i<d;i++) str=str.replace(/F/g,rule);
+    var x=0,y=0,a=0,pts=[[0,0]]; for(var k=0;k<str.length;k++){ var ch=str[k]; if(ch==='F'){ x+=Math.cos(a); y+=Math.sin(a); pts.push([x,y]); } else if(ch==='+') a+=ang*Math.PI/180; else if(ch==='-') a-=ang*Math.PI/180; }
+    var x0=1e9,x1=-1e9,y0=1e9,y1=-1e9; pts.forEach(function(p){ x0=Math.min(x0,p[0]); x1=Math.max(x1,p[0]); y0=Math.min(y0,p[1]); y1=Math.max(y1,p[1]); });
+    var k2=Math.min(w,h)*.9/Math.max(x1-x0,y1-y0), ox=(w-(x1-x0)*k2)/2, oy=(h-(y1-y0)*k2)/2; c.lineWidth=d>2?1:1.6; c.beginPath();
+    pts.forEach(function(p,i){ var px=ox+(p[0]-x0)*k2, py=oy+(p[1]-y0)*k2; if(i) c.lineTo(px,py); else c.moveTo(px,py); }); c.stroke(); }}; }
+  function genFractal(){
+    var t=rn(7), all=[], g, k, i;
+    if(t===0) return gridFr([[0,0],[2,0],[0,2],[2,2]],3,'칸토어 먼지',5);
+    if(t===1){ for(i=0;i<9;i++) if(i!==4) all.push([i%3,(i/3)|0]); return gridFr(all,3,'시에르핀스키 카펫',4); }
+    if(t===2) return {name:'시에르핀스키 삼각형',dim:Math.log(3)/Math.log(2),dMax:6,draw:function(c,w,h,d){ var S=Math.min(w,h)*.96, hh=S*.866; (function rec(x,y,s,k){ if(k===0){ c.beginPath(); c.moveTo(x+s/2,y); c.lineTo(x+s,y+s*.866); c.lineTo(x,y+s*.866); c.fill(); return; } rec(x+s/4,y,s/2,k-1); rec(x,y+s*.433,s/2,k-1); rec(x+s/2,y+s*.433,s/2,k-1); })((w-S)/2,(h-hh)/2,S,d); }};
+    if(t===3){ var tl=[turtle('F+F--F+F',60,'F--F--F',4,3,'코흐 눈송이',4), turtle('F+F-F-FF+F+F-F',90,'F+F+F+F',8,4,'변형 코흐 섬 (직각)',3), turtle('F+F-F-F+F',90,'F+F+F+F',5,3,'변형 코흐 곡선 (돌기형)',3)]; return tl[rn(3)]; }
+    if(t===4){ g=3+rn(3); var mx=[0,0,0,8,12,15][g]; k=g===3?4+rn(5):g===4?5+rn(8):6+rn(10); for(i=0;i<g*g;i++) all.push([i%g,(i/g)|0]); return gridFr(shf(all).slice(0,k),g,'변형 프랙탈 (격자형)',g===3?4:3); }
+    if(t===5){ for(i=0;i<5;i++) if(i!==2) all.push([i%3,(i/3)|0]); return gridFr([[1,0],[0,1],[1,1],[2,1],[1,2]],3,'비첵 프랙탈',4); }
+    var s2=3+rn(4), n2=2+rn(Math.min(2,Math.ceil(s2/2)-1)), pos;
+    do{ pos=shf([0,1,2,3,4,5].slice(0,s2)).slice(0,n2).sort(function(a,b){return a-b;}); }while(pos.some(function(p,j){ return j&&p-pos[j-1]<2; }));
+    return {name:'칸토어 집합 변형',dim:Math.log(n2)/Math.log(s2),dMax:n2===2?6:4,draw:function(c,w,h,d){ var rh=h/(d+1.3); for(var kk=0;kk<=d;kk++){ (function rec(x,wd,j){ if(j===kk){ c.fillRect(x,kk*rh,Math.max(wd,.8),rh*.7); return; } pos.forEach(function(p){ rec(x+p*wd/s2,wd/s2,j+1); }); })(w*.02,w*.96,0); } }};
+  }
+  function parseAns(s){ s=String(s).toLowerCase().replace(/\s+/g,'').replace(/log|ln/g,'L'); if(!/^[0-9.+\-*\/()L]+$/.test(s)) return NaN; s=s.replace(/L(\d+(?:\.\d+)?)/g,'Math.log($1)').replace(/L\(/g,'Math.log('); if(/L/.test(s)) return NaN; try{ return Function('"use strict";return ('+s+')')(); }catch(e){ return NaN; } }
+  function room4(){
+    var solved=0, F;
+    shell(4,'프랙탈의 방','나타난 프랙탈의 하우스도르프 차원을 구하세요. 자기유사성(조각 수 N, 축소 비율 1/s)을 찾으면 D = ln N / ln s 입니다. 3문제를 모두 맞히면 다음 방으로 갑니다.',
+      '<div class="mono" id="fq" style="text-align:center;font-size:13px;margin-bottom:8px"></div><div style="display:flex;gap:10px;justify-content:center;align-items:flex-end;margin-bottom:10px"><canvas id="fA" width="300" height="300" style="border:1.5px solid var(--line);max-width:66vw;height:auto"></canvas><div style="text-align:center"><canvas id="fB" width="110" height="110" style="border:1.5px solid var(--line)"></canvas><div class="mono" style="font-size:10px;opacity:.7">1단계</div></div></div><div class="mono" id="fnm" style="text-align:center;font-size:12px;opacity:.75;margin-bottom:10px"></div><div style="display:flex;gap:8px"><input id="fin" class="authinput" data-nokp="1" autocomplete="off" placeholder="D = (예: 1.26 또는 ln4/ln3)" style="flex:1;margin:0"><button class="btn" id="fok" style="width:auto;padding:0 24px">제출</button></div><div class="mono" id="fst" style="min-height:1.5em;font-size:13px;text-align:center;margin-top:10px"></div>');
+    function paint(id,sz,d){ var c=$(id).getContext('2d'), ink=css('--ink'); c.clearRect(0,0,sz,sz); c.fillStyle=ink; c.strokeStyle=ink; F.draw(c,sz,sz,d); }
+    function next(){ F=genFractal(); paint('fA',300,F.dMax); paint('fB',110,1); $('fnm').textContent=F.name; $('fin').value=''; say('fq','문제 '+(solved+1)+' / 3'); }
+    function check(){
+      if(solved>=3) return; var v=parseAns($('fin').value);
+      if(!isFinite(v)){ say('fst','숫자 또는 ln4/ln3 형식으로 입력하세요.',true); return; }
+      if(Math.abs(v-F.dim)<=0.01){ solved++; if(solved>=3){ say('fst','✅ 모두 정답! 다음 방으로 이동합니다…'); setTimeout(function(){ startRoom(5); },1100); } else { say('fst','✅ 정답! D ≈ '+F.dim.toFixed(4)+' — 다음 문제'); setTimeout(function(){ next(); say('fst',''); },1100); } }
+      else say('fst','❌ 틀렸습니다. 조각 수와 축소 비율을 다시 세어 보세요.',true);
+    }
+    $('fok').onclick=check; $('fin').addEventListener('keydown',function(e){ if(e.key==='Enter') check(); });
+    next();
+  }
+
+  /* ----- ROOM 5 : 탈출구를 찾아라 (몬티 홀) ----- */
+  var mBag=[], mSt={st:[0,0],sw:[0,0]};
+  function room5(){
+    var car,pk,op,fin,phase='pick',win=false;
+    shell(5,'탈출구를 찾아라!','문 3개 중 탈출구는 하나뿐입니다. 하나를 고르면 탈출구가 아닌 문 하나를 열어 드립니다. 그대로 갈지, 바꿀지 선택하세요.','<div id="mt"></div>'
+      +'<div class="mono" style="font-size:11px;opacity:.65;margin-top:14px;line-height:1.6">처음 고른 문이 탈출구일 확률은 정확히 1/3(33%), 바꿨을 때는 2/3(67%). 3판마다 정확히 한 번만 처음 선택이 맞도록 진행됩니다.</div>');
+    function f(a){ return a[1]?a[0]+'/'+a[1]+' ('+Math.round(a[0]/a[1]*100)+'%)':'-'; }
+    function other(){ return [0,1,2].filter(function(x){ return x!==pk&&x!==op; })[0]; }
+    function render(){
+      var h='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">';
+      for(var i=0;i<3;i++){ var face='🚪', sub='문 '+(i+1);
+        if(phase!=='pick'&&i===op) face='🐐'; if(phase==='end') face=(i===car)?'🌅':'🐐';
+        h+='<button data-d="'+i+'" style="height:110px;border:'+((pk===i)?'3px':'1.5px')+' solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:44px;cursor:'+(phase==='pick'?'pointer':'default')+'">'+face+'<div class="mono" style="font-size:11px">'+sub+(pk===i?' · 선택':'')+'</div></button>'; }
+      h+='</div><div id="mm" style="min-height:2.6em;font-size:14px;text-align:center;margin-bottom:10px;line-height:1.5"></div><div id="mb" class="btnrow2"></div><div class="mono" style="font-size:11px;text-align:center;opacity:.7;margin-top:8px">누적 — 유지: '+f(mSt.st)+' · 바꿈: '+f(mSt.sw)+'</div>';
+      $('mt').innerHTML=h;
+      var mm=$('mm'), mb=$('mb');
+      function btn(t,fn,ghost){ var b=document.createElement('button'); b.className='btn'+(ghost?' ghost':''); b.textContent=t; b.onclick=fn; mb.appendChild(b); }
+      if(phase==='pick') mm.textContent='문을 하나 고르세요.';
+      else if(phase==='ask'){ mm.innerHTML='문 '+(op+1)+'번을 열었습니다 — 🐐 염소!<br>문 '+(pk+1)+'번을 그대로 선택할까요, 문 '+(other()+1)+'번으로 바꿀까요?'; btn('그대로 유지',function(){ decide(false); },true); btn('문 '+(other()+1)+'번으로 바꾸기',function(){ decide(true); }); }
+      else { if(win){ mm.innerHTML='🎉 <b>탈출구를 찾았습니다!</b>'; btn('탈출하기 (DLC 클리어)',function(){ meta.dlc=meta.dlc||{}; var d=meta.dlc.eps1=meta.dlc.eps1||{}; d.cleared=true; saveMeta(); exit(); }); } else { mm.innerHTML='염소였습니다… 탈출구는 문 '+(car+1)+'번이었어요.'; btn('다시 도전',function(){ phase='pick'; pk=op=fin=undefined; render(); }); } }
+      Array.prototype.forEach.call($('mt').querySelectorAll('button[data-d]'),function(b){ b.onclick=function(){ if(phase==='pick') choose(+b.getAttribute('data-d')); }; });
+    }
+    function choose(i){
+      pk=i; if(!mBag.length) mBag=shf([true,false,false]); var hit=mBag.pop(), o=[0,1,2].filter(function(x){ return x!==i; });
+      car=hit?i:o[rn(2)]; var c=[0,1,2].filter(function(x){ return x!==i&&x!==car; }); op=c[rn(c.length)]; phase='ask'; render();
+    }
+    function decide(sw){ fin=sw?other():pk; win=(fin===car); var a=mSt[sw?'sw':'st']; a[1]++; if(win) a[0]++; phase='end'; render(); }
+    render();
+  }
   window.__pz={S:function(){ return S; },upd:function(dt){ update(dt); },keys:keys,open:open,submit:submit};
 
   /* ---------- 키 번호 입력창 ---------- */
   var gt=document.createElement('div'); gt.id='pzGate';
   gt.style.cssText='display:none;position:fixed;left:0;top:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,.6);align-items:center;justify-content:center';
-  gt.innerHTML='<div class="gocard" style="width:min(320px,88vw);background:var(--bg)"><div style="font-weight:700;margin-bottom:12px">키 번호를 입력하세요</div><input id="pzKey" class="authinput" type="text" data-nokp="1" autocomplete="off" autocapitalize="off" placeholder="KEY"><div class="mono" id="pzKeyMsg" style="min-height:1.4em;font-size:12px;color:#d32f2f;margin-bottom:8px"></div><div style="display:flex;gap:8px"><button class="btn" id="pzKeyOk" style="flex:1">확인</button><button class="btn ghost" id="pzKeyNo" style="flex:1">취소</button></div></div>';
+  gt.innerHTML='<div class="gocard" style="width:min(320px,88vw);background:var(--bg)"><div style="font-weight:700;margin-bottom:12px">키 번호를 입력하세요</div><input id="pzKey" class="authinput" type="text" data-nokp="1" autocomplete="off" autocapitalize="off" placeholder="KEY"><div class="mono" id="pzKeyMsg" style="min-height:1.4em;font-size:12px;color:#d32f2f;margin-bottom:8px"></div><button class="btn ghost" id="pzKeyHd" style="margin-bottom:8px">📖 하우스도르프 차원 공부</button><div style="display:flex;gap:8px"><button class="btn" id="pzKeyOk" style="flex:1">확인</button><button class="btn ghost" id="pzKeyNo" style="flex:1">취소</button></div></div>';
   document.body.appendChild(gt);
   ['keydown','keyup'].forEach(function(t){ gt.addEventListener(t,function(e){ e.stopPropagation(); }); });
   function gate(){ document.getElementById('pzKey').value=''; document.getElementById('pzKeyMsg').textContent=''; gt.style.display='flex'; setTimeout(function(){ document.getElementById('pzKey').focus(); },50); }
@@ -4113,6 +4310,34 @@ var JOY={active:false,x:0,y:0};
   document.getElementById('pzKeyOk').addEventListener('click',gateOk);
   document.getElementById('pzKeyNo').addEventListener('click',function(){ gt.style.display='none'; });
   document.getElementById('pzKey').addEventListener('keydown',function(e){ if(e.key==='Enter') gateOk(); if(e.key==='Escape') gt.style.display='none'; });
+
+  /* ---------- 하우스도르프 차원 공부 ---------- */
+  var hd=document.createElement('div'); hd.id='hdStudy';
+  hd.style.cssText='display:none;position:fixed;left:0;top:0;right:0;bottom:0;z-index:99995;background:rgba(0,0,0,.6);align-items:center;justify-content:center';
+  hd.innerHTML='<div class="gocard" style="width:min(480px,92vw);max-height:86vh;overflow:auto;background:var(--bg);text-align:left;line-height:1.65;font-size:13px">'
+   +'<div style="font-weight:700;font-size:16px;margin-bottom:8px">📖 하우스도르프 차원 공부</div>'
+   +'<div><b>핵심 공식</b><br>도형이 <b>1/s 로 줄인 조각 N개</b>로 이루어져 있으면<br><div class="mono" style="font-size:16px;margin:6px 0;text-align:center">D = ln N / ln s</div></div>'
+   +'<div style="margin-top:8px"><b>왜 이렇게 될까?</b><br>선분은 1/s로 줄인 조각 s개(D=1), 정사각형은 s²개(D=2), 정육면체는 s³개(D=3)로 쪼개집니다. 즉 N = s<sup>D</sup> 이므로 D = ln N / ln s 입니다. 프랙탈은 이 D가 정수가 아닌 값이 나옵니다.</div>'
+   +'<div style="margin-top:10px"><b>그림에서 읽는 법 (3단계)</b><br>① <b>1단계 그림</b>에서 조각 개수 N을 센다. (격자형은 칠해진 칸 수)<br>② 조각 하나가 전체의 1/s 인 s를 구한다. (격자형은 한 변을 나눈 칸 수, 코흐 곡선은 선 하나를 몇 배 줄였는지)<br>③ ln N / ln s 를 계산한다.</div>'
+   +'<div style="margin-top:10px"><b>대표 예시</b><table class="mono" style="font-size:12px;width:100%;margin-top:4px;border-collapse:collapse">'
+   +[['칸토어 집합','2','3','0.6309'],['칸토어 먼지','4','3','1.2619'],['코흐 곡선·눈송이','4','3','1.2619'],['시에르핀스키 삼각형','3','2','1.5850'],['비첵 프랙탈','5','3','1.4650'],['시에르핀스키 카펫','8','3','1.8928'],['직각 코흐 곡선','8','4','1.5000']].map(function(r){ return '<tr style="border-top:1px solid rgba(128,128,128,.4)"><td style="padding:3px 0">'+r[0]+'</td><td>N='+r[1]+'</td><td>s='+r[2]+'</td><td style="text-align:right">D≈'+r[3]+'</td></tr>'; }).join('')
+   +'</table></div>'
+   +'<div style="margin-top:10px"><b>도형별로 N, s 읽는 법</b><br>'
+   +'• <b>격자형</b> (칸토어 먼지·시에르핀스키 카펫·변형 격자): 한 변을 g칸으로 나눴을 때 <b>칠해진 칸 수 = N</b>, <b>s = g</b>. 예) 3×3에서 가운데만 비우면 N=8, s=3 → ln8/ln3 ≈ 1.8928<br>'
+   +'• <b>선 반복형</b> (코흐·직각 코흐): 1단계 그림의 <b>선분 개수 = N</b>, <b>s = (시작 선의 전체 길이) ÷ (새 선분 한 개의 길이)</b>. 코흐는 선분 4개, 각각 1/3 → N=4, s=3<br>'
+   +'• <b>칸토어 집합형</b>: 선분을 s등분해서 <b>남은 조각 수 = N</b>. 예) 3등분 후 양끝만 남기면 N=2, s=3<br>'
+   +'• <b>시에르핀스키 삼각형</b>: 1/2로 줄인 삼각형 3개 → N=3, s=2</div>'
+   +'<div style="margin-top:10px"><b>검산 팁</b><br>평면 위 도형이면 D는 2를 넘을 수 없어요. N이 s²보다 크면 세다가 틀린 거예요. 칸토어 계열처럼 점들이 흩어진 도형은 D가 1보다 작고, 선이 꼬불꼬불한 도형은 1~2 사이가 나옵니다.</div>'
+   +'<div style="margin-top:10px"><b>계산기</b><div style="display:flex;gap:6px;align-items:center;margin-top:4px"><input id="hdN" class="authinput" data-nokp="1" type="number" min="1" placeholder="N" style="margin:0;flex:1"><input id="hdS" class="authinput" data-nokp="1" type="number" min="2" placeholder="s" style="margin:0;flex:1"><div class="mono" id="hdOut" style="flex:1.3;text-align:center">D = ?</div></div></div>'
+   +'<div style="margin-top:10px"><b>입력 방법</b><br>방 4에서는 <span class="mono">1.26</span> 처럼 소수로 쓰거나 <span class="mono">ln4/ln3</span> 처럼 식으로 써도 됩니다. 오차 ±0.01 까지 정답이에요.</div>'
+   +'<button class="btn" id="hdClose" style="margin-top:12px">닫기</button></div>';
+  document.body.appendChild(hd);
+  ['keydown','keyup'].forEach(function(t){ hd.addEventListener(t,function(e){ e.stopPropagation(); }); });
+  function hdCalc(){ var n=parseFloat(document.getElementById('hdN').value), sc=parseFloat(document.getElementById('hdS').value); document.getElementById('hdOut').textContent=(n>0&&sc>1)?'D ≈ '+(Math.log(n)/Math.log(sc)).toFixed(4):'D = ?'; }
+  document.getElementById('hdN').addEventListener('input',hdCalc); document.getElementById('hdS').addEventListener('input',hdCalc);
+  function hdOpen(){ hd.style.display='flex'; }
+  document.getElementById('hdClose').addEventListener('click',function(){ hd.style.display='none'; });
+  document.getElementById('pzKeyHd').addEventListener('click',hdOpen);
 
   /* ---------- 스테이지 탭: BASIC | ADVANCED | DLC ---------- */
   var dlcTab=false, _rmD=renderMenu;
@@ -4122,16 +4347,25 @@ var JOY={active:false,x:0,y:0};
     var un=dlcUnlocked(), note;
     Array.prototype.forEach.call(tabs.querySelectorAll('button'),function(bt){ var old=bt.onclick; bt.onclick=function(){ dlcTab=false; old.call(this); }; if(dlcTab) bt.className='btn ghost'; });
     var db=document.createElement('button'); db.className='btn'+(dlcTab?'':' ghost'); db.style.flex='1'; db.style.fontSize='12px'; db.textContent=(un?'🧩 ':'🔒 ')+'DLC 스테이지';
-    db.onclick=function(){ if(!un){ document.getElementById('dlcNote').textContent='🔒 STAGE 10을 클리어하면 열립니다.'; return; } dlcTab=true; renderMenu(); };
+    db.onclick=function(){ dlcTab=true; renderMenu(); };
     tabs.appendChild(db);
     note=document.getElementById('dlcNote'); if(!note){ note=document.createElement('div'); note.id='dlcNote'; note.className='mono'; note.style.cssText='font-size:12px;min-height:16px;margin:-4px 0 8px'; tabs.parentNode.insertBefore(note,list); } note.textContent='';
     var box=document.getElementById('dlcList'); if(!box){ box=document.createElement('div'); box.id='dlcList'; list.parentNode.insertBefore(box,list.nextSibling); }
-    if(dlcTab&&un){
+    var ec=document.getElementById('endlessCard'); if(ec) ec.style.display=dlcTab?'none':'';
+    if(dlcTab){
       Array.prototype.forEach.call(list.children,function(c){ c.style.display='none'; });
-      var got=!!(meta.dlc&&meta.dlc.eps1&&meta.dlc.eps1.hidden);
-      box.innerHTML=''; var card=document.createElement('div'); card.className='stagecard'; card.style.cursor='pointer';
-      card.innerHTML='<div class="mono" style="font-size:11px;opacity:.7">DLC 1 · PUZZLE</div><div style="font-size:17px;font-weight:700;margin:4px 0">이상한 나라의 엡실론</div><div style="font-size:12px;opacity:.75">몸으로 밀어 돌려서 수식을 만족시키세요.</div>'+(got?'<div class="mono" style="font-size:11px;margin-top:6px">✦ 히든 가호 획득</div>':'');
-      card.onclick=gate; box.appendChild(card); box.style.display='block';
+      box.innerHTML='';
+      var hb=document.createElement('button'); hb.className='btn ghost'; hb.style.marginBottom='10px'; hb.textContent='📖 하우스도르프 차원 공부하기 (방 4 대비)'; hb.onclick=hdOpen; box.appendChild(hb);
+      var card=document.createElement('div'); card.className='stagecard'+(un?'':' locked');
+      if(un){
+        var got=!!(meta.dlc&&meta.dlc.eps1&&meta.dlc.eps1.hidden);
+        card.style.cursor='pointer';
+        card.innerHTML='<div><div class="mono" style="font-size:11px;opacity:.7">DLC 1 · PUZZLE</div><div style="font-size:17px;font-weight:700;margin:4px 0">이상한 나라의 엡실론</div><div style="font-size:12px;opacity:.75">몸으로 밀어 돌려서 수식을 만족시키세요.</div>'+(got?'<div class="mono" style="font-size:11px;margin-top:6px">✦ 히든 가호 획득</div>':'')+'</div>';
+        card.onclick=gate;
+      } else {
+        card.innerHTML='<div><div class="mono" style="font-size:11px;opacity:.7">DLC 1 · PUZZLE</div><div style="font-size:17px;font-weight:700;margin:4px 0">🔒 이상한 나라의 엡실론</div><div style="font-size:12px;opacity:.75">STAGE 10을 클리어하면 입장할 수 있어요. 그 전에 위의 공부 버튼으로 미리 예습해 두세요!</div></div>';
+      }
+      box.appendChild(card); box.style.display='block';
     } else box.style.display='none';
   };
 })();
