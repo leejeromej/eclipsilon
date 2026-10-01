@@ -474,7 +474,7 @@ button{font-family:inherit;}
     <div class="wrap">
       <div class="brand"><h1>🏆 랭킹</h1><p>HARD 클리어 기록은 서버가 측정한 실제 소요 시간 (짧을수록 상위)</p></div>
       <div id="rankTabs">
-        <button data-b="hard14">HARD 14 시간</button><button data-b="hard15">HARD 15 시간</button><button data-b="endless">무한 포인트</button><button data-b="progress">진행도</button>
+        <button data-b="hard13">HARD 13 시간</button><button data-b="hard14">HARD 14 시간</button><button data-b="hard15">HARD 15 시간</button><button data-b="endless">무한 포인트</button><button data-b="progress">진행도</button>
       </div>
       <div id="rankList" class="mono"></div>
       <button class="btn ghost" id="rankBack" style="margin-top:14px;">메뉴로</button>
@@ -494,6 +494,8 @@ button{font-family:inherit;}
 ============================================================ */
 function rnd(n){ return Math.floor(Math.random()*n); }
 function randInt(min,max){ return min+Math.floor(Math.random()*(max-min+1)); }
+/* 고가 각성 위력 보정: 일반몹·무한모드 5분/8분 보스를 겨냥한 배율 (SS각성 > L스킬 > S각성) */
+var AW_TIERBUF={S:1.6,SS:3.4,SSS:6.2};
 var AW_NERF=0.6, AW_LOWTIER={E:1,D:1,C:1,B:1,A:1}, AW_HARDCAP=0.5, AW_SRC=false;   /* 각성 너프 설정 — 여러 구역에서 함께 쓰므로 바깥 범위에 선언 */
 /* ---------------- 효과음 (Web Audio · 파일 없음) ---------------- */
 var SFX=(function(){
@@ -620,11 +622,13 @@ var TRIGDERIV_QA=[
   {q:'d/dx[sin(5x)] at x=0 = ?', a:5}
 ];
 function trigDerivGen(lv){
-  var k=randInt(2,9), m=randInt(1,6), type=rnd(4);
-  if(type===0) return {q:'d/dx[sin('+k+'x)] at x=0 = ?',a:k};
-  if(type===1) return {q:'d/dx[cos('+k+'x)] at x=0 = ?',a:0};
-  if(type===2) return {q:'d/dx['+m+'sin('+k+'x)] at x=0 = ?',a:m*k};
-  return {q:'d/dx['+m+'cos('+k+'x)] at x=0 = ?',a:0};
+  var k=randInt(2,9), m=randInt(2,6), j=randInt(2,7), p=randInt(2,9), type=rnd(6);
+  if(type===0) return {q:'d/dx['+m+'sin('+k+'x) + '+p+'x] at x=0 = ?',a:m*k+p};
+  if(type===1) return {q:'d/dx['+m+'cos('+k+'x) + '+p+'sin('+j+'x)] at x=0 = ?',a:p*j};
+  if(type===2) return {q:'d/dx[sin('+k+'x)·cos('+j+'x)] at x=0 = ?',a:k};
+  if(type===3) return {q:'d²/dx²[cos('+k+'x)] at x=0 = ?',a:-k*k};
+  if(type===4) return {q:'d/dx['+m+'sin('+k+'x) − '+p+'cos('+j+'x)] at x=0 = ?',a:m*k};
+  return {q:'d²/dx²['+m+'sin('+k+'x) + '+p+'cos('+j+'x)] at x=0 = ?',a:-p*j*j};
 }
 var EXPHYP_QA=[
   {q:'d/dx[e^(4x)] at x=0 = ?', a:4},
@@ -717,7 +721,7 @@ var SKILL_POOL=[
  {id:'integral',tier:'A',name:'적분',desc:'넓은 범위에 누적된 큰 피해.',study:'적분은 미분의 역연산이며 누적량을 구합니다.',kind:'nova',radius:190,baseDmg:40,cd:8200,win:4900,pause:true,gen:integralGen},
  {id:'ode',tier:'S',name:'미분방정식',desc:'유도 미사일 다수를 소환한다.',study:'미분방정식은 함수와 도함수 사이의 관계식입니다.',kind:'homing',count:6,baseDmg:18,cd:15000,win:8200,pause:true,gen:odeGen},
  {id:'chain',tier:'S',name:'연쇄법칙',desc:'함수의 구조를 분해해 연속 폭발을 일으킨다.',study:'합성함수의 미분에서 바깥함수의 미분과 안쪽함수의 미분을 곱합니다.',kind:'chain',baseDmg:58,cd:15500,win:7800,pause:true,gen:chainGen},
- {id:'matrix',tier:'S',name:'행렬식',desc:'전장을 격자로 절단하는 십자형 파동.',study:'2×2 행렬식은 ad−bc로 계산하며 선형변환의 넓이 배율과 관련됩니다.',kind:'matrix',baseDmg:62,cd:16200,win:8200,pause:true,gen:matrixGen},
+ {id:'matrix',tier:'S',name:'행렬식',desc:'전장을 격자로 절단하는 십자형 파동.',study:'2×2 행렬식은 ad−bc로 계산하며 선형변환의 넓이 배율과 관련됩니다.',kind:'matrix',baseDmg:62,cd:16200,win:5600,pause:true,gen:matrixGen},
  {id:'trigderiv',tier:'SS',name:'삼각함수의 미분',desc:'삼각함수의 주기를 찢는 초고위력 일격.',study:'sin(x)의 미분은 cos(x), cos(x)의 미분은 −sin(x)입니다.',kind:'burst',baseDmg:78,cd:17500,win:8000,pause:true,gen:trigDerivGen},
  {id:'exphyp',tier:'SS',name:'지수·쌍곡선함수',desc:'공간을 추적하는 유도 미사일 8기.',study:'eˣ은 미분해도 자기 자신이며 cosh, sinh는 eˣ과 e⁻ˣ의 조합입니다.',kind:'homing',count:8,baseDmg:22,cd:18000,win:8600,pause:true,gen:expHypGen},
  {id:'limit',tier:'SS',name:'극한과 로피탈',desc:'한계점을 관통하는 초압축 빔.',study:'극한은 입력이 특정 값에 가까워질 때 함수값이 접근하는 값을 다룹니다.',kind:'limit',baseDmg:92,cd:19000,win:9000,pause:true,gen:limitGen},
@@ -2026,7 +2030,7 @@ challengeSubmit=function(){
   if(ch && ch.aw && !ch.isBossQuiz){
     var ok=ansEq(ch.buf,ch.a), sk=ch.sk, lv=ch.lv, aw=ch.aw, slot=G.loadout[ch.slotIdx];
     closeChallenge(); slot.cdLeft=awCdOf(sk)*cdMult(lv);
-    if(ok){ tierFX(sk,G.player); tierFX({tier:'SSS'},G.player); spawnFloat(G.player.x,G.player.y-64,'✦ 각성 · '+sk.name+' 발동'); var low=awLow(sk), dd=AWD[sk.id]*(low?AW_NERF:1)*dmgMult(lv)*petMultiplier(), n0=G.projectiles.length;
+    if(ok){ tierFX(sk,G.player); tierFX({tier:'SSS'},G.player); spawnFloat(G.player.x,G.player.y-64,'✦ 각성 · '+sk.name+' 발동'); var low=awLow(sk), dd=AWD[sk.id]*(low?AW_NERF:1)*(AW_TIERBUF[sk.tier]||1)*dmgMult(lv)*petMultiplier(), n0=G.projectiles.length;
       if(low){ runAwLow(function(){ AW[sk.id].fire(sk,dd,aw); }); for(var pi=n0;pi<G.projectiles.length;pi++) G.projectiles[pi].awLow=true; }
       else AW[sk.id].fire(sk,dd,aw); }
     else spawnFloat(G.player.x,G.player.y-30,'오답!');
@@ -2065,7 +2069,7 @@ renderLoadout=function(){
   });
 };
 function AWAKEN_COST(tier){
-  return {E:1000,D:1000,C:1000,B:5000,A:5000,S:8000,SS:15000,SSS:30000}[tier]||1000;
+  return {E:1000,D:1000,C:1000,B:5000,A:5000,S:20000,SS:50000,SSS:100000}[tier]||1000;
 }
 function spawnFloatMenuMsg(msg){
   var el=document.getElementById('gachaResult'); if(el) el.textContent=msg;
@@ -2162,7 +2166,7 @@ spawnBoss=function(){
   var b=G.boss; if(!b||!b.bossType) return;
   var L={complex:'e^(iπ)',zeta:'ζ(s)',sigma:'Σ',epsilon:'ε'}[b.bossType]; if(!L) return;
   b.label=L; document.getElementById('bossName').textContent=G.stage.name+' · 보스 「'+L+'」';
-  if(b.bossType==='complex'){ b.maxHp=b.hp=12; b.phase=1; b.spd=48; G.cx=null; cx(); spawnFloat(b.x,b.y-100,'TMI: i는 e ≈ 2.71초 간격으로 나타난다'); }
+  if(b.bossType==='complex'){ b.maxHp=b.hp=(G.mode==='endless'?5:12); b.phase=1; b.spd=48; G.cx=null; cx(); spawnFloat(b.x,b.y-100,'TMI: i는 e ≈ 2.71초 간격으로 나타난다'); }
   if(b.bossType==='epsilon') b.spd=70;
 };
 function toPhase2(b){
@@ -2340,7 +2344,8 @@ spawnBoss=function(){
   if(t==='epsilon'){ b.delta=170; c.ep=1; c.healT=5000; b.spd=55; setTimeout(function(){ if(G&&G.running) showStory(ST_EPS.intro); },50); }
   if(t==='mandel'){ b.diverge=false; c.mbT=5000; b.spd=60; }
   if(t==='hotel'){ c.hT=9000; b.spd=55; for(var i=0;i<6;i++) c.haz.push({x0:i*WORLD_W/6,y0:0,x1:i*WORLD_W/6+26,y1:WORLD_H,warn:0,life:1e12,vx:70,dmg:7,comb:true}); }
-  if(t==='singular'){ c.gs=1; c.gT=3000; c.sa=0; b.spd=35; }
+  if(t==='singular'){ c.gs=1; c.gT=3000; c.sa=0; b.spd=35;
+    if(G.stage&&G.stage.hardNo===13){ b.hard13=true; b.spd=Math.round(35*3.5); c.h13={ph:1,bh:70}; setTimeout(function(){ if(G&&G.running&&G.boss===b) spawnFloat(b.x,b.y-90,'HARD 13 · PHASE 1 — 모든 것이 3.5배 빠르다'); },400); } }
 };
 var _dm2=damageEnemy;
 damageEnemy=function(e,dmg){
@@ -2371,7 +2376,7 @@ spawnBossBolts=function(b){
     c.resetAtk=b.diverge?2100:2700; return; }
   if(t==='hotel'){ for(i=0;i<14;i++) hb(b.x,b.y,i/14*TAU,190,b.dmg*0.42,7,i*26,{shT:700});
     hb(b.x,b.y,a0,300,b.dmg*0.6,9,60); c.resetAtk=2700; return; }
-  if(t==='singular'){ var r=b.hp/b.maxHp; c.sp2={left:r<0.66?36:26,t:0,a:Math.random()*TAU,arms:r<0.33?4:3,spd:170,h:270};
+  if(t==='singular'){ var r=b.hp/b.maxHp; if(b.hard13) r=(r<0.5?0.2:0.8); c.sp2={left:r<0.66?36:26,t:0,a:Math.random()*TAU,arms:r<0.33?4:3,spd:170,h:270};
     if(r<0.33) for(i=0;i<8;i++) hb(b.x,b.y,i/8*TAU,150,b.dmg*0.4,8,300);
     c.resetAtk=3000; return; }
   if(t==='godel'){ c.resetAtk=1e9; return; }
@@ -2432,11 +2437,22 @@ function ext2(dt){
   if(isBT('hotel')){ c.hT-=dtms;
     if(c.hT<=0){ c.hT=9000; c.haz.forEach(function(h){ if(h.comb) h.vx=-h.vx; }); spawnFloat(b.x,b.y-70,'n → n−1 : 방이 반대로 이동'); } }
   if(isBT('singular')){
-    var r3=b.hp/b.maxHp, dx=b.x-p.x, dy=b.y-p.y, d=Math.hypot(dx,dy)||1;
-    c.gT-=dtms; if(r3<0.33&&c.gT<=0){ c.gT=3200; c.gs=-c.gs; spawnFloat(b.x,b.y-70,c.gs<0?'호킹 복사: 척력':'중력 회귀: 인력'); }
-    var g=Math.min(150,Math.max(35,26000/Math.max(d,120)))*(r3<0.66?1.15:1)*c.gs;
+    var r3=b.hp/b.maxHp, dx=b.x-p.x, dy=b.y-p.y, d=Math.hypot(dx,dy)||1, h13=b.hard13?c.h13:null;
+    if(h13){ r3=(r3<0.5?0.2:0.8);
+      if(r3<0.5&&h13.ph===1){ h13.ph=2; c.gs=1; c.gT=4200; spawnFloat(b.x,b.y-90,'PHASE 2 — 사건의 지평선 확장 · 중력 폭주'); burstFX(b.x,b.y,3); c.orbs.push({x:p.x+90,y:p.y,kind:'heal',t:0,life:9000}); G.projectiles=G.projectiles.filter(function(q){ return q.kind!=='bossbolt'; }); }
+      h13.bh+=((h13.ph===2?175:70)-h13.bh)*Math.min(1,dt*2.2); }
+    c.gT-=dtms;
+    if(h13){ if(h13.ph===2&&c.gT<=0){ c.gs=-c.gs; c.gT=c.gs>0?4200:2400; spawnFloat(b.x,b.y-70,c.gs<0?'호킹 복사: 척력 — 지금 벗어나라!':'중력 회귀: 인력'); } }
+    else if(r3<0.33&&c.gT<=0){ c.gT=3200; c.gs=-c.gs; spawnFloat(b.x,b.y-70,c.gs<0?'호킹 복사: 척력':'중력 회귀: 인력'); }
+    var g;
+    if(h13&&h13.ph===2){
+      var CAP=h13.bh+260;
+      g = d<CAP ? Math.min(1100,480+(CAP-d)*1.4) : Math.max(60,150-(d-CAP)*0.15);   /* 포획 반경 안: 이동속도(≈235)의 2~4배로 끌려간다 */
+      if(c.gs<0) g=Math.min(g,430);
+      g*=c.gs;
+    } else g=Math.min(150,Math.max(35,26000/Math.max(d,120)))*(r3<0.66?1.15:1)*c.gs;
     if(!(p.dashTime>0)){ p.x=clamp(p.x+dx/d*g*dt,20,WORLD_W-20); p.y=clamp(p.y+dy/d*g*dt,20,WORLD_H-20); }
-    if(d<70+p.r) hurt(14,'사건의 지평선');
+    if(d<(h13?h13.bh:70)+p.r) hurt(h13?22:14,'사건의 지평선');
     if(r3<0.66){ c.sa+=dt*0.55; [c.sa,c.sa+Math.PI].forEach(function(a){ if(hitRay(p.x,p.y,b.x,b.y,a,p.r+4)) hurt(9,'레이저'); }); } }
   // 특이점(궁극기) 블랙홀
   if(c.hole){ var h=c.hole; h.life-=dtms;
@@ -2471,7 +2487,7 @@ function drawExt2(){
     if(b.bossType==='mandel'){ var rec=function(x,y,r,d,a){ ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.stroke(); if(d>0) for(var k=0;k<3;k++){ var an=a+k*TAU/3; rec(x+Math.cos(an)*r*1.5,y+Math.sin(an)*r*1.5,r*0.45,d-1,an+tt); } };
       ctx.lineWidth=2; ctx.globalAlpha=b.diverge?0.95:0.6; ctx.strokeStyle=hue(tt*90+(b.diverge?0:180)); rec(bs.x,bs.y,b.r+22,3,tt*0.7); ctx.globalAlpha=1; }
     if(b.bossType==='hotel'){ ctx.lineWidth=3; for(var j=0;j<8;j++){ ctx.strokeStyle=hue(j*45+tt*100); ctx.beginPath(); ctx.arc(bs.x,bs.y,b.r+10+j*5,tt+j,tt+j+1.2); ctx.stroke(); } }
-    if(b.bossType==='singular'){ ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(bs.x,bs.y,70,0,TAU); ctx.fill(); ctx.lineWidth=5; for(var m=0;m<8;m++){ ctx.strokeStyle=hue(m*45+tt*220); ctx.beginPath(); ctx.arc(bs.x,bs.y,78+m*6,tt*2+m,tt*2+m+2); ctx.stroke(); }
+    if(b.bossType==='singular'){ var hr=(b.hard13&&c.h13)?c.h13.bh:70; ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(bs.x,bs.y,hr,0,TAU); ctx.fill(); ctx.lineWidth=5; for(var m=0;m<8;m++){ ctx.strokeStyle=hue(m*45+tt*220); ctx.beginPath(); ctx.arc(bs.x,bs.y,hr+8+m*6*(hr/70),tt*2+m,tt*2+m+2); ctx.stroke(); }
       if(b.hp<b.maxHp*0.66){ ctx.lineWidth=6; ctx.strokeStyle=hue(300); [c.sa,c.sa+Math.PI].forEach(function(a){ ctx.beginPath(); ctx.moveTo(bs.x,bs.y); ctx.lineTo(bs.x+Math.cos(a)*3200,bs.y+Math.sin(a)*3200); ctx.stroke(); }); } }
     ctx.fillStyle=ink; ctx.strokeStyle=ink;
   }
@@ -2521,13 +2537,16 @@ window.addEventListener('keydown',function(e){ if(tabOpen){ e.stopPropagation();
 window.addEventListener('keydown',function(e){ if(KB.act(e)==='ult'&&!(e.target&&/^(INPUT|TEXTAREA)$/.test(e.target.tagName))&&G&&G.running&&!G.challenge&&!G.freeze&&!cx().eps) useUlt(); });
 function tabNewQ(){
   var body=document.getElementById('utBody');
-  if(tS.mode==='primes'){ var nums=[],pr=[],co=[],i; for(i=2;i<=97;i++) (isPrime(i)?pr:co).push(i);
-    var pc=randInt(5,7); pr.sort(function(){return Math.random()-0.5;}); co.sort(function(){return Math.random()-0.5;});
-    nums=pr.slice(0,pc).concat(co.slice(0,16-pc)).sort(function(){return Math.random()-0.5;}); tS.left=pc;
-    body.innerHTML='<div style="font-size:18px">소수만 클릭하세요 (오답 −1)</div><div id="utG" style="display:grid;grid-template-columns:repeat(4,84px);gap:10px"></div><div id="utSc" class="mono"></div>';
+  if(tS.mode==='primes'){ var nums=[],pr=[],co=[],big=[],i;
+    for(i=2;i<=97;i++) (isPrime(i)?pr:co).push(i);
+    while(big.length<2){ var bv=(Math.random()<0.5)?randInt(101,999):randInt(1001,9999); if(bv%2===0||bv%5===0) continue; if(big.indexOf(bv)<0) big.push(bv); }   /* 16개 중 2개는 3~4자리 */
+    var pc=randInt(4,6); pr.sort(function(){return Math.random()-0.5;}); co.sort(function(){return Math.random()-0.5;});
+    nums=pr.slice(0,pc).concat(co.slice(0,14-pc)).concat(big).sort(function(){return Math.random()-0.5;});
+    tS.left=pc+big.filter(isPrime).length;
+    body.innerHTML='<div style=\"font-size:18px\">소수만 클릭하세요 · <b>오답을 누르면 발동이 취소됩니다!</b></div><div id=\"utG\" style=\"display:grid;grid-template-columns:repeat(4,92px);gap:10px\"></div><div id=\"utSc\" class=\"mono\"></div>';
     var g=document.getElementById('utG');
     nums.forEach(function(n){ var bt=document.createElement('button'); bt.className='btn ghost'; bt.style.cssText='height:64px;font-size:22px;'; bt.textContent=n;
-      bt.onclick=function(){ if(bt.disabled) return; if(isPrime(n)){ bt.disabled=true; bt.style.opacity=0.35; bt.textContent=n+' ✓'; tS.score++; tS.left--; if(tS.left<=0) tabNewQ(); } else { tS.score=Math.max(0,tS.score-1); bt.style.outline='3px solid var(--ink)'; setTimeout(function(){ bt.style.outline=''; },250); } tabScore(); }; g.appendChild(bt); });
+      bt.onclick=function(){ if(bt.disabled) return; if(isPrime(n)){ bt.disabled=true; bt.style.opacity=0.35; bt.textContent=n+' ✓'; tS.score++; tS.left--; if(tS.left<=0) tabNewQ(); } else { tabCancel(); return; } tabScore(); }; g.appendChild(bt); });
   } else {
     tS.cur=tS.mode==='seq'?seqGen():rushQ(tS.hard);
     body.innerHTML='<div id="utQ" style="font-size:44px;font-weight:700;letter-spacing:1px"></div><input id="utIn" type="number" style="font-size:30px;width:220px;text-align:center;padding:10px;background:var(--card-bg);color:var(--ink);border:2px solid var(--line)"><div id="utSc" class="mono"></div><button class="btn" id="utGo" style="max-width:220px">확인 (Enter)</button>';
@@ -2535,6 +2554,11 @@ function tabNewQ(){
     document.getElementById('utGo').onclick=tabSubmit; document.getElementById('utIn').focus();
   }
   tabScore();
+}
+function tabCancel(){
+  if(!tS||tS.done) return; clearInterval(tS.iv); tS.done=true;
+  document.getElementById('utBody').innerHTML='<div style="font-size:30px;font-weight:700">✖ 오답!</div><div style="font-size:18px">소수의 심판 발동이 취소되었습니다.</div>';
+  setTimeout(function(){ tab.style.display='none'; tabOpen=false; G.freeze=false; spawnFloat(G.player.x,G.player.y-50,'소수의 심판 — 발동 취소'); },1400);
 }
 function tabScore(){ var e=document.getElementById('utSc'); if(e) e.textContent='정답 '+tS.score+(tS.streak>1?'  ·  연속 '+tS.streak:''); }
 function tabSubmit(){
@@ -2628,7 +2652,7 @@ endRun=function(win){
   if(win && G && G.mode==='story' && G.stage){
     var st=G.stage;
     if(st.rewardUlt){ if(!meta.ults[st.rewardUlt]){ meta.ults[st.rewardUlt]=true; if(!meta.ultSel) meta.ultSel=st.rewardUlt; msg+=' ◈ 궁극기 획득: 「'+ULTS[st.rewardUlt].name+'」 (로드아웃 SLOT 5)'; } else { meta.currency+=100; msg+=' ◈ 궁극기 보유 중 — 100P'; } }
-    if(st.bonusP){ var _rep14=(st.id===13||st.id===14||st.id===15||st.id===16)&&!!meta.clearedStages[st.id]; var _gp=_rep14?Math.max(1,Math.round(st.bonusP/10)):st.bonusP; meta.currency+=_gp; msg+=' +'+_gp+'P'+(_rep14?' (재클리어 1/10)':''); }
+    if(st.bonusP){ if(st.hardNo===13){ var _once=!meta.clearedStages[st.id]; if(_once){ meta.currency+=st.bonusP; msg+=' ★ HARD 13 최초 클리어 보상 +'+st.bonusP+'P (1회성)'; } else msg+=' (1회성 보상은 이미 수령함)'; } else { var _rep14=(st.id===13||st.id===14||st.id===15||st.id===16)&&!!meta.clearedStages[st.id]; var _gp=_rep14?Math.max(1,Math.round(st.bonusP/10)):st.bonusP; meta.currency+=_gp; msg+=' +'+_gp+'P'+(_rep14?' (재클리어 1/10)':''); } }
     if(st.ultBonus){ meta.ultFrom=meta.ultFrom||{}; var uk=(st.id===13||st.id===15)?'pair14':(st.id===14||st.id===16)?'pair15':('s'+st.id); if(!meta.ultFrom[uk]){ meta.ultFrom[uk]=true; meta.ultBonus=(meta.ultBonus||0)+st.ultBonus; msg+=' ◈ 궁극기 사용 횟수 +'+st.ultBonus+' (게임당 '+ultMax()+'회)'; } }
   }
   _er3(win);
@@ -3051,8 +3075,9 @@ spawnBossBolts=function(b){
 };
 function omLane(x,b){
   var dir=x.spec.lanes==='grid'?(x.laneDir==='h'?'v':'h'):'h'; x.laneDir=dir;
-  var k=9, safe=rnd(k), size=(dir==='h'?WORLD_H:WORLD_W)/k;
-  for(var i=0;i<k;i++){ if(i===safe) continue;
+  var k=9, size=(dir==='h'?WORLD_H:WORLD_W)/k, hot={}, hn=0;
+  while(hn<6){ var q=rnd(k); if(!hot[q]){ hot[q]=1; hn++; } }   /* 9칸 중 랜덤 3칸이 안전(살 수 있는 칸), 6칸이 위험 */
+  for(var i=0;i<k;i++){ if(!hot[i]) continue;
     x.haz.push(dir==='h'?{x0:0,y0:i*size,x1:WORLD_W,y1:(i+1)*size,warn:1100,life:650,dmg:12}:{x0:i*size,y0:0,x1:(i+1)*size,y1:WORLD_H,warn:1100,life:650,dmg:12}); }
 }
 var _upOm=update;
@@ -3303,7 +3328,8 @@ function stageById(id){ return STAGES.filter(function(s){return s.id===id;})[0];
 })();
 
 /* ---------- 2) 로비 UI: 하드 탭 제거 → 15스테 클리어 시 스테이지 카드가 빨간색으로, 로드아웃에 「하드 도전」 버튼 ---------- */
-var HARD_PAIR={15:13,16:14};
+STAGES.push({id:17,name:'사건의 지평선',hard:true,hardNo:13,desc:'★HARD 13 — 보스 「1/0」 2페이즈. 1페이즈는 이동·공격이 약 3.5배 빠르고, 2페이즈는 블랙홀이 훨씬 커지고 중력이 폭주해 가까이 가면 꾹 눌러도 빠져나올 수 없다. 클리어 시 1회성 포인트 보상',killQuota:40,types:['point','segment','polygon'],diffMult:6.0,bossHpMult:12,bossDmgMult:2.2,bossType:'singular',bonusP:4000});
+var HARD_PAIR={12:17,15:13,16:14};
 function hardUnlocked(){ return !!(meta.clearedStages && meta.clearedStages[16]); }
 
 var _rmHard=renderMenu;
@@ -3324,10 +3350,16 @@ renderMenu=function(){
     if(st.hard){ card.style.display='none'; return; }
     var tb=(i>=10?1:0); card.style.display=(tb===stageTab)?'':'none';
     card.style.borderColor=''; card.style.boxShadow='';
-    if(unlocked && (st.id===15||st.id===16)){
-      card.style.borderColor='#d32f2f'; card.style.boxShadow='0 0 0 2px #d32f2f inset';
-      var tag=card.querySelector('.st-tag');
-      if(tag){ tag.textContent='★ 하드 도전 가능'; tag.style.color='#d32f2f'; tag.style.borderColor='#d32f2f'; }
+    if(unlocked && HARD_PAIR[st.id]!==undefined){
+      var hCleared=!!(meta.clearedStages && meta.clearedStages[HARD_PAIR[st.id]]), tag=card.querySelector('.st-tag');
+      card.style.background=''; 
+      if(hCleared){   /* 하드 클리어 → 금색 */
+        card.style.borderColor='#d4a017'; card.style.boxShadow='0 0 0 2px #d4a017 inset, 0 0 14px rgba(212,160,23,.45)'; card.style.background='linear-gradient(135deg,rgba(255,215,0,.22),rgba(212,160,23,.08))';
+        if(tag){ tag.textContent='★ HARD 클리어'; tag.style.color='#b8860b'; tag.style.borderColor='#d4a017'; }
+      } else {
+        card.style.borderColor='#d32f2f'; card.style.boxShadow='0 0 0 2px #d32f2f inset';
+        if(tag){ tag.textContent='★ 하드 도전 가능'; tag.style.color='#d32f2f'; tag.style.borderColor='#d32f2f'; }
+      }
     }
   });
 };
@@ -3410,7 +3442,11 @@ AW.integral={gen:function(){ var a=randInt(2,10); return {q:'∫₀^'+a+' 2x dx 
     safeLater(260,function(){ blast(px,py,R,d*2.0); });
     spawnFloat(px,py-44,'넓이 '+c.a+' → 누적 팽창 폭발'); }};
 
-AW.chain={gen:function(){ var a=pick([-6,-5,-4,-3,-2,-1,1,2,3,4,5,6]),b=pick([-6,-5,-4,-3,-2,-1,1,2,3,4,5,6]); return {q:'바깥함수 미분값 f′='+a+', 안쪽함수 미분값 g′='+b+' 일 때\n합성함수의 미분 (f∘g)′ = f′·g′ 의 값은?',a:a*b}; },
+AW.chain={gen:function(){
+    var n=pick([2,3]), a=pick([-3,-2,-1,1,2,3]), b=pick([-4,-3,-2,-1,1,2,3,4]), x0=pick([-3,-2,-1,1,2,3]);
+    var g=a*x0*x0+b, ans=n*Math.pow(g,n-1)*2*a*x0;
+    if(Math.abs(ans)>99999) return AW.chain.gen();
+    return {q:'f(u) = u'+sup(n)+',  g(x) = '+a+'x'+sup(2)+' '+fmtSigned(b)+'\n(f∘g)′(x) 를 x='+x0+'에서 계산하면?',a:ans}; },
   fire:function(sk,d,c){ var p=G.player,px=p.x,py=p.y,a0=aimAng(),n=Math.min(6,3+Math.round(Math.abs(c.a)/6)),i;
     for(i=0;i<n;i++)(function(i){ safeLater(i*150,function(){ rayStrike(G.player.x,G.player.y,a0+(i-(n-1)/2)*0.3,620,34,d*1.5,null,6); }); })(i);
     spawnFloat(px,py-44,'f′g′='+c.a+' → 연쇄 광선 '+n+'줄기'); }};
@@ -3425,7 +3461,10 @@ AW.limit={gen:function(){ var a=pick([-8,-7,-6,-5,-4,-3,-2,-1,1,2,3,4,5,6,7,8]);
     lineStrike(px,py,tx,ty,50,d*2.4,null,7); blast(tx,ty,140+Math.abs(c.a)*6,d*1.8);
     spawnFloat(px,py-44,'극한값 '+c.a+' → 압축 광선 + 폭발'); }};
 
-AW.partial={gen:function(){ var a=randInt(-6,6),b=randInt(1,5),y0=randInt(-4,4); return {q:'f(x,y) = '+a+'x + '+b+'y² 일 때, ∂f/∂y 를 y='+y0+'에서 계산하면?',a:2*b*y0}; },
+AW.partial={gen:function(){
+    var a=pick([-4,-3,-2,-1,1,2,3,4]), b=pick([-4,-3,-2,-1,1,2,3,4]), c2=pick([-3,-2,-1,1,2,3]), x0=pick([-3,-2,-1,1,2,3]), y0=pick([-3,-2,-1,1,2,3]);
+    var ans=a*x0*x0+2*b*x0*y0+3*c2*y0*y0;
+    return {q:'f(x,y) = '+a+'x'+sup(2)+'y '+fmtSigned(b)+'xy'+sup(2)+' '+fmtSigned(c2)+'y'+sup(3)+'\n∂f/∂y 를 ('+x0+', '+y0+')에서 계산하면?',a:ans}; },
   fire:function(sk,d,c){ var p=G.player,px=p.x,py=p.y;
     lineStrike(0,py,WORLD_W,py,44,d*1.8,null,6); lineStrike(px,0,px,WORLD_H,44,d*1.8,null,6);
     if(c.a!==0) safeLater(200,function(){ blast(px,py,220,d*1.6); });
@@ -4478,7 +4517,7 @@ var JOY={active:false,x:0,y:0};
         btn('탈출하기 (DLC 클리어)',clearDlc);
       } else {
         msg('염소였습니다… 탈출구는 문 '+(S5.car+1)+'번이었어요.<br><span style="opacity:.8">'+(S5.swapped?'바꿨지만 이번엔 처음 선택이 정답이었네요. (확률 1/3)':'바꿨다면 탈출구였어요. (바꿀 때 확률 2/3)')+'</span>');
-        btn('다시 도전',resetScene);
+        S5.ph='out'; meta.currency=(meta.currency||0)+500; saveMeta(); $('mm').innerHTML+='<br><b>🎁 위로금 +500P</b> — 몬티가 ε을 복도 밖으로 안내합니다…'; say('h','수고했다. 위로금이다.',3200); btn('DLC에서 나가기',exit); after(4500,function(){ if(S5.ph==='out') exit(); });
       }
     }
     function resetScene(){
@@ -4704,7 +4743,7 @@ var _cfg=window.ECLIPSILON_CONFIG||{}, SB_URL=String(_cfg.url||'PASTE_SUPABASE_U
 var sb=null; try{ if(window.supabase && SB_URL.indexOf('http')===0) sb=window.supabase.createClient(SB_URL,SB_KEY); }catch(e){}
 window.__isAdmin=false; window.__uid=null;
 window.__cloud={on:!!sb};
-var rankTab='hard14', RANK_PTS={endless:1};
+var rankTab='hard13', RANK_PTS={endless:1};
 (function(){                                     // 메뉴에 서버/관리자 상태 표시 (문제 진단용)
   var al=document.querySelector('#screen-menu .accountline'); if(!al) return;
   var st=document.createElement('div'); st.id='cloudStat'; st.style.cssText='font-size:12px;opacity:.8;margin:4px 0 10px';
@@ -4774,7 +4813,7 @@ if(sb){
   /* --- 랭킹: 판 시작/종료를 서버 함수로 --- */
   var rankBoardOf=function(g){
     if(!g) return null; if(g.mode==='endless') return 'endless';
-    var s=g.stage; if(g.mode==='story'&&s&&s.hard){ if(s.hardNo===14) return 'hard14'; if(s.hardNo===15) return 'hard15'; }
+    var s=g.stage; if(g.mode==='story'&&s&&s.hard){ if(s.hardNo===13) return 'hard13'; if(s.hardNo===14) return 'hard14'; if(s.hardNo===15) return 'hard15'; }
     return null;
   };
   var _srRank=startRun;
@@ -4931,6 +4970,14 @@ renderLoadout=function(){
   d.textContent=sel?BLESSINGS[sel].desc:'선택한 가호가 없습니다. (랭킹 등록 시 닉네임 앞에 [가호 이름]이 표시돼요)'; box.appendChild(d);
 };
 
+/* ===== HARD 13: 1페이즈는 공격 주기까지 약 3.5배 ===== */
+var _upH13=update;
+update=function(dt){
+  _upH13(dt);
+  if(!G||!G.running||G.freeze||!G.stage||G.stage.hardNo!==13||G.phase!=='boss'||!G.boss||G.boss.dead||!G.boss.hard13) return;
+  var h=cx().h13; if(h&&h.ph===1) G.bossAttackTimer-=dt*1000*2.05;
+};
+
 /* ---- 효과음 연결 ---- */
 document.addEventListener('click',function(e){ var t=e.target; if(t&&t.closest&&t.closest('button,.stagecard,.pickchip')) SFX.play('click'); },true);
 var _sfS=fireSkill; fireSkill=function(sk,lv){ SFX.play('skill'); return _sfS(sk,lv); };
@@ -4943,6 +4990,7 @@ window.__sfx=SFX;
 showScreen('lobby');
 
 })();
+
 </script>
 </body>
 </html>
