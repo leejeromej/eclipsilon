@@ -1412,7 +1412,7 @@ function update(dt){
 
   G.loadout.forEach(function(slot,i){
     if(!slot) return;
-    if(slot.cdLeft>0){ slot.cdLeft=Math.max(0,slot.cdLeft-dtms); }
+    if(slot.cdLeft>0 && !G.freeze){ slot.cdLeft=Math.max(0,slot.cdLeft-dtms); }   /* 정지(문제 풀이/연출) 중에는 쿨타임도 정지 */
     var el = document.querySelector('.cd[data-i="'+i+'"]');
     if(el){ el.style.height = (slot.cdLeft>0? (slot.cdLeft/(slot.sk.cd*cdMult(slot.lv))*100):0)+'%'; }
   });
@@ -4767,6 +4767,7 @@ if(sb){
     if(/rate limit/i.test(m)) return '요청이 너무 많습니다. 잠시 후 다시 시도하세요.';
     return m;
   };
+  var cloudSynced=false;   // 클라우드 세이브를 한 번이라도 정상 로드해야 업로드 허용(오래된 로컬이 덮어쓰는 사고 방지)
   var applySession=async function(user){
     window.__uid=user.id;
     var pr=await sb.from('profiles').select('name,is_admin').eq('user_id',user.id).maybeSingle();
@@ -4774,6 +4775,7 @@ if(sb){
     window.__isAdmin=!!(pr.data&&pr.data.is_admin);
     localStorage.setItem(CURRENT_KEY,name);
     var sv=await sb.from('saves').select('data').eq('user_id',user.id).maybeSingle();
+    if(!sv.error) cloudSynced=true;
     if(sv.data&&sv.data.data){ meta=normalizeMeta(sv.data.data); try{ localStorage.setItem(storageKeyFor(name),JSON.stringify(meta)); }catch(e){} }
     else { meta=loadMeta(name); cloudPush(); }
     reportProgress();          // 클라우드 세이브가 없으면 이 기기의 로컬 세이브를 올린다
@@ -4784,9 +4786,25 @@ if(sb){
     if(n>0) sb.rpc('report_progress',{p_count:n}).then(function(){},function(){});
   };
   var cloudPush=async function(){
-    if(!window.__uid||pushing) return; pushing=true;
+    if(!window.__uid||pushing||!cloudSynced) return; pushing=true;
     try{ await sb.from('saves').upsert({user_id:window.__uid,data:meta,updated_at:new Date().toISOString()}); }catch(e){}
     pushing=false;
+  };
+  /* 판 시작 시점에 세션이 아직 안 잡혀 있어도(업데이트 직후 등) 직접 세션을 확보한다 */
+  var authBusy=null;
+  var ensureAuth=function(){
+    if(window.__uid) return Promise.resolve(window.__uid);
+    if(authBusy) return authBusy;
+    var fin=function(){ authBusy=null; };
+    authBusy=sb.auth.getSession().then(function(r){
+      var ss=r&&r.data&&r.data.session;
+      if(ss&&ss.user) return ss;
+      return sb.auth.refreshSession().then(function(r2){ return r2&&r2.data&&r2.data.session; });
+    }).then(function(ss){
+      if(!ss||!ss.user) return null;
+      return applySession(ss.user).catch(function(){ window.__uid=ss.user.id; }).then(function(){ return window.__uid; });
+    }).catch(function(){ return null; }).then(function(v){ fin(); return v; });
+    return authBusy;
   };
   window.__cloud.auth=async function(id,pw,signup){
     authMessage('처리 중…');
@@ -4820,9 +4838,20 @@ if(sb){
   startRun=function(mode,idx){
     _srRank.apply(this,arguments);
     var g=G; if(!g) return; var b=rankBoardOf(g); g.rankBoard=b; g.rankRun=null;
-    if(!b||!window.__uid||isAdmin()) return;
-    g.rankRun=sb.rpc('start_run',{p_board:b}).then(function(r){ if(r.error) throw new Error(r.error.message); return r.data; })
-      .catch(function(e){ g.rankErr=e.message; return null; });
+    if(!b||isAdmin()) return;
+    var tryStart=function(n){
+      return ensureAuth().then(function(uid){
+        if(!uid) throw new Error('로그인 필요 (세션 만료 — 메뉴에서 다시 로그인해 주세요)');
+        if(isAdmin()) return null;
+        return sb.rpc('start_run',{p_board:b}).then(function(r){ if(r.error) throw new Error(r.error.message); return r.data; });
+      }).catch(function(e){
+        if(n<2 && G===g && g.running){   // 세션 갱신 후 최대 2번 재시도
+          return sb.auth.refreshSession().catch(function(){}).then(function(){ return new Promise(function(res){ setTimeout(res,800); }); }).then(function(){ return tryStart(n+1); });
+        }
+        g.rankErr=e.message; return null;
+      });
+    };
+    g.rankRun=tryStart(0);
   };
   var rankSubmit=function(g,cleared){
     if(!g||g._rankSent||!g.rankBoard) return; g._rankSent=true;
@@ -4975,7 +5004,7 @@ var _upH13=update;
 update=function(dt){
   _upH13(dt);
   if(!G||!G.running||G.freeze||!G.stage||G.stage.hardNo!==13||G.phase!=='boss'||!G.boss||G.boss.dead||!G.boss.hard13) return;
-  var h=cx().h13; if(h&&h.ph===1) G.bossAttackTimer-=dt*1000*2.05;
+  var h=G.cx&&G.cx.h13; if(h&&h.ph===1) G.bossAttackTimer-=dt*1000*2.05;
 };
 
 /* ---- 효과음 연결 ---- */
