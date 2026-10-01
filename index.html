@@ -237,7 +237,7 @@ button{font-family:inherit;}
 .pickchip.tier-SS,.pickchip.tier-SSS{border-width:3px;box-shadow:4px 4px 0 var(--ink);}
 .pickchip.tier-SSS{border-style:double;border-width:5px;}
 /* lobby */
-#screen-lobby{overflow:hidden;background:var(--bg);}
+#screen-lobby{overflow-x:hidden;overflow-y:auto;background:var(--bg);}
 #lobbyBg{position:absolute;inset:0;width:100%;height:100%;}
 .lobby-center{position:relative;z-index:1;min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px 20px;}
 .eclipse{position:relative;width:170px;height:170px;margin-bottom:26px;}
@@ -252,9 +252,10 @@ button{font-family:inherit;}
 .lobby-start{min-width:230px;font-size:16px;letter-spacing:.2em;padding:15px 26px;}
 .lobby-center #lobbyStats{justify-content:center;margin:26px 0 8px;}
 .lobby-tip{font-size:11.5px;color:var(--ink-soft);min-height:16px;transition:opacity .3s;}
-.lobby-credit{margin-top:18px;display:inline-block;padding:7px 16px;border:1.5px solid var(--line);font-size:13px;letter-spacing:.06em;color:var(--ink);background:var(--card-bg);}
+.lobby-credit{margin-top:14px;display:inline-block;padding:7px 16px;border:1.5px solid var(--line);font-size:13px;letter-spacing:.06em;color:var(--ink);background:var(--card-bg);}
 .lobby-credit b{font-weight:700;}
-.lobby-foot{position:absolute;left:0;right:0;bottom:12px;text-align:center;font-size:10.5px;color:var(--ink-faint);z-index:1;letter-spacing:.1em;}
+@media (max-height:720px){.eclipse{width:110px;height:110px;margin-bottom:14px;}.eclipse .eps{font-size:38px;}.lobby-sub{margin:6px 0 16px;}.lobby-center{padding:18px 20px 8px;}.lobby-center #lobbyStats{margin:14px 0 6px;}.lobby-credit{margin-top:8px;padding:5px 12px;font-size:12px;}}
+.lobby-foot{position:relative;left:0;right:0;bottom:auto;padding:0 0 14px;text-align:center;font-size:10.5px;color:var(--ink-faint);z-index:1;letter-spacing:.1em;}
 /* in-game */
 #hpVig{position:fixed;inset:0;pointer-events:none;z-index:6;opacity:0;transition:opacity .3s;box-shadow:inset 0 0 130px 30px var(--ink);}
 #hpVig.low{opacity:.32;animation:vigPulse 1s ease-in-out infinite;}
@@ -306,6 +307,7 @@ button{font-family:inherit;}
       <h1 class="lobby-title">ECLIPSILON</h1>
       <div class="lobby-sub">이클립실론 — 수식의 어둠 속에서, 개념을 무기로 살아남아라</div>
       <button class="btn lobby-start" id="lobbyStart">시작하기 ▶</button>
+      <button class="btn ghost" id="gotoSettings" style="margin-top:10px;min-width:230px;">⚙ 설정</button>
       <div class="mono" id="lobbyStats"></div>
       <div class="lobby-tip mono" id="lobbyTip"></div>
       <div class="lobby-credit mono">제작 및 문의 · <b>@2m.nze</b></div>
@@ -341,7 +343,6 @@ button{font-family:inherit;}
         <button class="btn ghost" id="gotoStudy">공부</button>
       </div>
       <button class="btn ghost" id="gotoRank" style="margin-top:10px;">🏆 랭킹</button>
-      <button class="btn ghost" id="gotoSettings" style="margin-top:10px;">⚙ 설정 (키 · 조이스틱 · 키패드)</button>
       <button class="btn ghost" id="resetDataBtn" style="margin-top:10px;">현재 계정 데이터 초기화</button>
     </div>
   </div>
@@ -460,11 +461,12 @@ button{font-family:inherit;}
     <div class="wrap">
       <div class="brand"><h1>⚙ 설정</h1><p>이 기기에만 저장됩니다</p></div>
       <label class="setrow"><input type="checkbox" id="setJoy"> 가상 조이스틱 + 대시·궁극기 버튼 (모바일용)</label>
+      <label class="setrow"><input type="checkbox" id="setSfx"> 🔊 효과음 켜기</label>
       <label class="setrow"><input type="checkbox" id="setPad"> 숫자 키패드 (입력창을 누르면 표시 · - √ 포함) (모바일용)</label>
       <div class="brand" style="margin-top:14px"><p>키를 바꾸려면 버튼을 누른 뒤 원하는 키를 누르세요 (Esc = 취소). 방향키는 항상 이동에 사용됩니다.</p></div>
       <div id="keyList"></div>
       <button class="btn ghost" id="keyReset" style="margin-top:12px;">키 기본값으로</button>
-      <button class="btn ghost" id="setBack" style="margin-top:10px;">메뉴로</button>
+      <button class="btn ghost" id="setBack" style="margin-top:10px;">로비로</button>
     </div>
   </div>
 
@@ -492,6 +494,29 @@ button{font-family:inherit;}
 ============================================================ */
 function rnd(n){ return Math.floor(Math.random()*n); }
 function randInt(min,max){ return min+Math.floor(Math.random()*(max-min+1)); }
+/* ---------------- 효과음 (Web Audio · 파일 없음) ---------------- */
+var SFX=(function(){
+  var ctx=null, on=true, last={};
+  try{ on=localStorage.getItem('eclipsilon_sfx')!=='0'; }catch(e){}
+  function ac(){ if(!ctx){ var C=window.AudioContext||window.webkitAudioContext; if(!C) return null; ctx=new C(); } if(ctx.state==='suspended') ctx.resume(); return ctx; }
+  function tone(f,t0,d,type,v,f2){
+    var a=ac(); if(!a) return; var t=a.currentTime+t0, o=a.createOscillator(), g=a.createGain();
+    o.type=type||'sine'; o.frequency.setValueAtTime(f,t); if(f2) o.frequency.exponentialRampToValueAtTime(f2,t+d);
+    g.gain.setValueAtTime(0.0001,t); g.gain.exponentialRampToValueAtTime(v||0.1,t+0.01); g.gain.exponentialRampToValueAtTime(0.0001,t+d);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+d+0.03);
+  }
+  var P={
+    click:function(){ tone(700,0,0.05,'square',0.04); },
+    skill:function(){ tone(420,0,0.14,'sawtooth',0.07,880); tone(880,0.09,0.16,'triangle',0.07); },
+    ok:function(){ tone(523,0,0.1,'triangle',0.09); tone(659,0.09,0.1,'triangle',0.09); tone(784,0.18,0.16,'triangle',0.09); },
+    bad:function(){ tone(240,0,0.26,'sawtooth',0.07,110); },
+    hit:function(){ tone(160,0,0.12,'square',0.08,60); },
+    win:function(){ [523,659,784,1047].forEach(function(f,i){ tone(f,i*0.11,0.18,'triangle',0.09); }); },
+    lose:function(){ [392,330,262,196].forEach(function(f,i){ tone(f,i*0.15,0.22,'sawtooth',0.06); }); }
+  };
+  function play(n){ if(!on||!P[n]) return; var t=performance.now(), gap=(n==='hit')?160:(n==='click'?40:60); if(last[n]&&t-last[n]<gap) return; last[n]=t; try{ P[n](); }catch(e){} }
+  return {play:play,isOn:function(){ return on; },set:function(v){ on=!!v; try{ localStorage.setItem('eclipsilon_sfx',v?'1':'0'); }catch(e){} if(on) play('ok'); }};
+})();
 function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
 function dist(x1,y1,x2,y2){ return Math.hypot(x2-x1,y2-y1); }
 function fmtSigned(b){ return b>=0? ('+ '+b) : ('- '+Math.abs(b)); }
@@ -966,6 +991,7 @@ function newRun(mode, stageIdx){
 }
 
 function startRun(mode, stageIdx){
+  selectedMode=mode; selectedStageIdx=stageIdx;   /* 재도전·다음 스테이지가 항상 방금 한 스테이지(하드 포함)를 가리키도록 */
   if(rafId) cancelAnimationFrame(rafId);
   rafId=0;
   keys={};
@@ -1364,8 +1390,7 @@ function loop(ts,myToken){
   if(canvas.width!==window.innerWidth || canvas.height!==window.innerHeight){ resizeCanvas(); }
   var dt = Math.min(0.05, (ts-lastTs)/1000);
   lastTs = ts;
-  update(dt);
-  render();
+  try{ update(dt); render(); }catch(err){ if(window.console) console.error(err); }
   rafId=requestAnimationFrame(function(nextTs){ loop(nextTs,myToken); });
 }
 
@@ -1529,7 +1554,7 @@ function update(dt){
       pr.x+=pr.vx*dt; pr.y+=pr.vy*dt; pr.life-=dtms;
       G.enemies.forEach(function(e){
         if(pr.hitSet.indexOf(e)===-1 && dist(pr.x,pr.y,e.x,e.y)<pr.r+e.r){
-          damageEnemy(e,pr.dmg); pr.hitSet.push(e); pr.pierce -= 1;
+          AW_SRC=!!pr.awLow; damageEnemy(e,pr.dmg); AW_SRC=false; pr.hitSet.push(e); pr.pierce -= 1;
         }
       });
       if(pr.pierce<0) pr.life=0;
@@ -1542,7 +1567,7 @@ function update(dt){
       pr.cx = lx + perpx*Math.sin(tt*Math.PI)*90;
       pr.cy = ly + perpy*Math.sin(tt*Math.PI)*90;
       G.enemies.forEach(function(e){
-        if(pr.hitSet.indexOf(e)===-1 && dist(pr.cx,pr.cy,e.x,e.y)<10+e.r){ damageEnemy(e,pr.dmg); pr.hitSet.push(e); }
+        if(pr.hitSet.indexOf(e)===-1 && dist(pr.cx,pr.cy,e.x,e.y)<10+e.r){ AW_SRC=!!pr.awLow; damageEnemy(e,pr.dmg); AW_SRC=false; pr.hitSet.push(e); }
       });
       if(pr.t>=1) pr.life=0; else pr.life=1;
     } else if(pr.kind==='homing'){
@@ -1552,13 +1577,13 @@ function update(dt){
         var hx=pr.target.x-pr.x, hy=pr.target.y-pr.y, hl=Math.hypot(hx,hy)||1;
         pr.vx += (hx/hl*220-pr.vx)*Math.min(1,dt*4);
         pr.vy += (hy/hl*220-pr.vy)*Math.min(1,dt*4);
-        if(hl<12+pr.target.r){ damageEnemy(pr.target,pr.dmg); pr.life=0; }
+        if(hl<12+pr.target.r){ AW_SRC=!!pr.awLow; damageEnemy(pr.target,pr.dmg); AW_SRC=false; pr.life=0; }
       }
       pr.x+=pr.vx*dt; pr.y+=pr.vy*dt;
     } else if(pr.kind==='dashhit'){
       pr.life-=dtms;
       G.enemies.forEach(function(e){
-        if(pr.hitSet.indexOf(e)===-1 && dist(p.x,p.y,e.x,e.y)<p.r+e.r+6){ damageEnemy(e,pr.dmg); pr.hitSet.push(e); }
+        if(pr.hitSet.indexOf(e)===-1 && dist(p.x,p.y,e.x,e.y)<p.r+e.r+6){ AW_SRC=!!pr.awLow; damageEnemy(e,pr.dmg); AW_SRC=false; pr.hitSet.push(e); }
       });
     } else if(pr.kind==='bossbolt'){
       if(!G.freeze){
@@ -1809,6 +1834,7 @@ function render(){
   ctx.fillText('ε',0,0);
   ctx.globalAlpha=1;
   ctx.restore();
+  if(G.monty && (G.monty.n>0 || (performance.now()-(G.monty.lastBlocked||0))<700)) montyShieldFX(ctx,ps.x,ps.y,tnow,inkColor);
 
   ctx.font='12px "JetBrains Mono", monospace'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
   G.floats.forEach(function(f){
@@ -1871,7 +1897,7 @@ function later(ms,fn){ cx().timers.push({t:ms,fn:fn}); }
 /* ---------- 데이터: 스테이지 / 스킬 ---------- */
 var ST=STAGES[0];
 STAGES.push(
- {id:6,name:'복소평면의 문',desc:'보스 「e^(iπ)」 — 허수 i를 모아 실수축으로 돌아가라 (2페이즈)',killQuota:22,types:['point','segment','polygon'],diffMult:2.1,bossHpMult:1.5,bossDmgMult:1.5,bossType:'complex',rewardSkill:'demoivre'},
+ {id:6,name:'복소평면의 문',desc:'보스 「e^(iπ)」 — 허수 i를 모아 실수축으로 돌아가라 (2페이즈) · TMI: i는 e≈2.71초 간격으로 나타난다',killQuota:22,types:['point','segment','polygon'],diffMult:2.1,bossHpMult:1.5,bossDmgMult:1.5,bossType:'complex',rewardSkill:'demoivre'},
  {id:7,name:'리만의 임계선',desc:'보스 「ζ(s)」 — 소용돌이 나선 탄막',killQuota:24,types:['point','segment','polygon'],diffMult:2.3,bossHpMult:2.4,bossDmgMult:1.6,bossType:'zeta'},
  {id:8,name:'시그마 수열탑',desc:'보스 「Σ」 — 부채꼴 일제 사격, 체력 절반 이하에서 폭주',killQuota:26,types:['point','segment','polygon'],diffMult:2.5,bossHpMult:2.8,bossDmgMult:1.7,bossType:'sigma'},
  {id:9,name:'ε 각성 관문',desc:'보스 「ε」 — 수렴하는 포위망. 클리어 시 스킬 각성 + ε-δ 논법 해금',killQuota:28,types:['point','segment','polygon'],diffMult:2.7,bossHpMult:3.0,bossDmgMult:1.8,bossType:'epsilon',rewardSkill:'epsdelta',awakenUnlock:true}
@@ -1969,6 +1995,17 @@ AW.exphyp={gen:function(){
 },
   fire:function(sk,d,c){ var p=G.player; nova(120+c.a*35,d*(1+c.a*0.3)); later(300,function(){ nova(160+c.a*40,d*(0.7+c.a*0.2)); });
    spawnFloat(p.x,p.y-44,'e^(ln '+c.a+') = '+c.a+' → 반경 '+(120+c.a*35)); }};
+var AW_NERF=0.6; /* S급 미만(E·D·C·B·A) 각성 스킬 데미지 40% 너프 — S 이상은 원래 데미지 */
+var AW_LOWTIER={E:1,D:1,C:1,B:1,A:1}, AW_HARDCAP=0.5, AW_SRC=false; /* 하드 스테이지: S 미만 각성은 1타에 몬스터 최대체력의 50%까지만 */
+function awLow(sk){ return !!(sk&&AW_LOWTIER[sk.tier]); }
+function runAwLow(fn){
+  var oL=later, oS=safeLater;
+  function wrap(f){ return function(){ var pv=AW_SRC; AW_SRC=true; try{ f.apply(this,arguments); } finally{ AW_SRC=pv; } }; }
+  later=function(ms,f){ return oL(ms,wrap(f)); };
+  safeLater=function(ms,f){ return oS(ms,wrap(f)); };
+  AW_SRC=true;
+  try{ fn(); } finally{ AW_SRC=false; later=oL; safeLater=oS; }
+}
 var AWD={add:150,mul:135,linear:170,gcd:150,quad:150,trig:100,vector:80,deriv:420,ode:380,trigderiv:700,exphyp:650}, AWCD=1800, AW_FAST={E:1,D:1,C:1,B:1}, AW_CD_RATIO=0.7;
 function awCdOf(sk){ return AW_FAST[sk.tier]?AWCD:Math.round(sk.cd*AW_CD_RATIO); }  // B 이하: 고정 1.8초 / A 이상: 원래 쿨타임 x0.7
 function isAwake(id){ return !!(meta.awakeOwned && meta.awakeOwned[id] && meta.awake && meta.awake[id] && AW[id] && (meta.owned[id]||0)>=6); }
@@ -1988,7 +2025,9 @@ challengeSubmit=function(){
   if(ch && ch.aw && !ch.isBossQuiz){
     var ok=ansEq(ch.buf,ch.a), sk=ch.sk, lv=ch.lv, aw=ch.aw, slot=G.loadout[ch.slotIdx];
     closeChallenge(); slot.cdLeft=awCdOf(sk)*cdMult(lv);
-    if(ok){ tierFX(sk,G.player); tierFX({tier:'SSS'},G.player); spawnFloat(G.player.x,G.player.y-64,'✦ 각성 · '+sk.name+' 발동'); AW[sk.id].fire(sk,AWD[sk.id]*dmgMult(lv)*petMultiplier(),aw); }
+    if(ok){ tierFX(sk,G.player); tierFX({tier:'SSS'},G.player); spawnFloat(G.player.x,G.player.y-64,'✦ 각성 · '+sk.name+' 발동'); var low=awLow(sk), dd=AWD[sk.id]*(low?AW_NERF:1)*dmgMult(lv)*petMultiplier(), n0=G.projectiles.length;
+      if(low){ runAwLow(function(){ AW[sk.id].fire(sk,dd,aw); }); for(var pi=n0;pi<G.projectiles.length;pi++) G.projectiles[pi].awLow=true; }
+      else AW[sk.id].fire(sk,dd,aw); }
     else spawnFloat(G.player.x,G.player.y-30,'오답!');
     return;
   }
@@ -2122,7 +2161,7 @@ spawnBoss=function(){
   var b=G.boss; if(!b||!b.bossType) return;
   var L={complex:'e^(iπ)',zeta:'ζ(s)',sigma:'Σ',epsilon:'ε'}[b.bossType]; if(!L) return;
   b.label=L; document.getElementById('bossName').textContent=G.stage.name+' · 보스 「'+L+'」';
-  if(b.bossType==='complex'){ b.maxHp=b.hp=12; b.phase=1; b.spd=48; G.cx=null; cx(); }
+  if(b.bossType==='complex'){ b.maxHp=b.hp=12; b.phase=1; b.spd=48; G.cx=null; cx(); spawnFloat(b.x,b.y-100,'TMI: i는 e ≈ 2.71초 간격으로 나타난다'); }
   if(b.bossType==='epsilon') b.spd=70;
 };
 function toPhase2(b){
@@ -2194,7 +2233,7 @@ function ext(dt){
       if(c.iTimer<=0){
         if(c.iObj){ c.beamTgt+=Math.PI/2; spawnFloat(b.x,b.y-64,'i 흡수! ×i → 좌표평면 90° 회전'); burstFX(b.x,b.y,2); }
         var ang=Math.random()*TAU, d=140+Math.random()*240;
-        c.iObj={x:clamp(p.x+Math.cos(ang)*d,40,WORLD_W-40),y:clamp(p.y+Math.sin(ang)*d,40,WORLD_H-40),t:0}; c.iTimer=2700;
+        c.iObj={x:clamp(p.x+Math.cos(ang)*d,40,WORLD_W-40),y:clamp(p.y+Math.sin(ang)*d,40,WORLD_H-40),t:0}; c.iTimer=2710;
       }
       if(c.iObj){ c.iObj.t+=dtms; if(dist(c.iObj.x,c.iObj.y,p.x,p.y)<p.r+20){ c.iObj=null; c.iCount++; spawnFloat(p.x,p.y-30,'+i ('+c.iCount+'/2)');
         if(c.iCount>=2){ c.iCount=0; b.hp-=1; spawnFloat(b.x,b.y-64,'i × i = −1  (HP −1)'); burstFX(b.x,b.y,2); if(b.hp<=0) toPhase2(b); } } }
@@ -2229,7 +2268,7 @@ function drawExt(){
         if(b.phase===1&&i<2){ ctx.setLineDash([]); ctx.globalAlpha=1; ctx.font='700 14px JetBrains Mono,monospace'; ctx.fillText(i===0?'Re':'Im',bs.x+Math.cos(a)*110,bs.y+Math.sin(a)*110-6); ctx.setLineDash(live?[]:[8,8]); ctx.globalAlpha=live?0.85:0.5; } });
       ctx.setLineDash([]);
       if(c.iObj){ var q=S(c.iObj.x,c.iObj.y); ctx.globalAlpha=1; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(q.x,q.y,18,0,TAU); ctx.stroke();
-        ctx.lineWidth=2; ctx.beginPath(); ctx.arc(q.x,q.y,26,-Math.PI/2,-Math.PI/2+TAU*(1-c.iObj.t/2700)); ctx.stroke();
+        ctx.lineWidth=2; ctx.beginPath(); ctx.arc(q.x,q.y,26,-Math.PI/2,-Math.PI/2+TAU*(1-c.iObj.t/2710)); ctx.stroke();
         ctx.font='italic 700 22px serif'; ctx.fillText('i',q.x,q.y+7); }
       if(b.phase===1){ var ps=S(p.x,p.y); ctx.globalAlpha=1; ctx.font='700 13px JetBrains Mono,monospace'; ctx.fillText('i × '+c.iCount+' / 2',ps.x,ps.y-30); }
     }
@@ -2351,7 +2390,7 @@ function ext2(dt){
     if(pr.kind!=='bossbolt') return;
     if(pr.sp>0){ pr.spT-=dtms; if(pr.spT<=0){ var a=Math.atan2(pr.vy,pr.vx), sp=Math.hypot(pr.vx,pr.vy)*0.92; pr.life=0;
       [-0.6,0,0.6].forEach(function(o){ add.push({kind:'bossbolt',x:pr.x,y:pr.y,vx:Math.cos(a+o)*sp,vy:Math.sin(a+o)*sp,r:6,life:2100,dmg:pr.dmg*0.85,hue:pr.hue+30,sp:pr.sp-1,spT:600}); }); } }
-    if(pr.shT>0){ pr.shT-=dtms; if(pr.shT<=0){ pr.x+=70; } }
+    if(pr.shT>0){ pr.shT-=dtms; if(pr.shT<=0) pr.shD=260; } else if(pr.shD>0){ var stp=Math.min(dtms,pr.shD); pr.x+=70*stp/260; pr.shD-=dtms; }
   });
   if(add.length) G.projectiles.push.apply(G.projectiles,add);
   // 위험 구역
@@ -3310,7 +3349,7 @@ renderLoadout=function(){
     hb2.style.display='';
     hb2.onclick=function(){
       var hs=stageById(HARD_PAIR[stg.id]); var hIdx=STAGES.indexOf(hs);
-      if(hIdx>=0) startRun('story',hIdx);
+      if(hIdx>=0){ selectedMode='story'; selectedStageIdx=hIdx; startRun('story',hIdx); }
     };
   } else if(hb2){ hb2.style.display='none'; }
 };
@@ -3755,6 +3794,64 @@ update=function(dt){ _upX(dt);
   };
 })();
 
+/* ===================== 이계미분방정식 (쿠폰 전용 E급) + 쿠폰 입력 ===================== */
+function mibunGen(lv){
+  function nz(lo,hi){ var x=0; while(x===0) x=randInt(lo,hi); return x; }
+  function co(n){ return n===1?'':String(n); }
+  var v=rnd(4), r1,r2,c1,c2,a,b,m;
+  if(v===0||v===3){
+    r1=randInt(1,4); do{ r2=randInt(1,4); }while(r2===r1); c1=nz(-5,5); c2=nz(-5,5);
+    var S=r1+r2, P=r1*r2, ans;
+    if(v===0){ a=c1+c2; b=c1*r1+c2*r2; ans=c1*Math.pow(2,r1)+c2*Math.pow(2,r2);
+      return {q:'y″ − '+S+'y′ + '+P+'y = 0\ny(0) = '+a+',  y′(0) = '+b+'\n일 때 y(ln 2) 의 값은?', a:ans}; }
+    m=nz(-4,4); a=m+c1+c2; b=c1*r1+c2*r2; ans=m+c1*Math.pow(2,r1)+c2*Math.pow(2,r2);
+    return {q:'y″ − '+S+'y′ + '+P+'y = '+(P*m)+'\ny(0) = '+a+',  y′(0) = '+b+'\n일 때 y(ln 2) 의 값은?', a:ans};
+  }
+  if(v===1){
+    var r=randInt(1,5); c1=nz(-5,5); c2=nz(-5,5); a=c1; b=c1*r+c2;
+    return {q:'y″ − '+(2*r)+'y′ + '+co(r*r)+'y = 0\ny(0) = '+a+',  y′(0) = '+b+'\n일 때 e^{−'+r+'}·y(1) 의 값은?', a:c1+c2};
+  }
+  var al=randInt(-2,2), be=randInt(1,4), A=nz(-4,4), B=nz(-4,4); a=A; b=al*A+be*B;
+  var mid=al===0?'':(' '+(al>0?'−':'+')+' '+co(2*Math.abs(al))+'y′');
+  return {q:'y″'+mid+' + '+co(al*al+be*be)+'y = 0\ny(0) = '+a+',  y′(0) = '+b+'\n일 때 y = e^{'+al+'x}( A cos '+co(be)+'x + B sin '+co(be)+'x ) 의 B 의 값은?', a:B};
+}
+var MIBUN_CD=Math.max.apply(null,SKILL_POOL.filter(function(s){ return s.tier==='L'; }).map(function(s){ return s.cd; }));
+SKILL_POOL.push({id:'mibun',tier:'E',secret:true,name:'이계미분방정식',desc:'체력을 1~10 랜덤 회복한다. (시간 정지 없음 · 쿠폰 전용 · 문제 매우 어려움)',
+  study:'특성방정식 r²+pr+q=0 의 근으로 해를 구한다.\n서로 다른 두 실근: y=c₁e^{r₁x}+c₂e^{r₂x}\n중근: y=(c₁+c₂x)e^{rx}\n복소근 α±βi: y=e^{αx}(A cosβx + B sinβx)\n우변이 상수 K 이면 특수해 y=K/q 를 더한 뒤 초기조건 y(0), y′(0) 으로 계수를 정한다.',
+  kind:'mibun',baseDmg:0,cd:MIBUN_CD,win:24000,pause:false,gen:mibunGen});
+var _fsMb=fireSkill;
+fireSkill=function(sk,lv){
+  if(sk.kind==='mibun'){
+    var p=G.player, h=randInt(1,10); p.hp=Math.min(p.maxHp,p.hp+h);
+    tierFX(sk,p); spawnFloat(p.x,p.y-44,'이계미분방정식 +'+h+' 회복');
+    return;
+  }
+  return _fsMb(sk,lv);
+};
+(function(){
+  var COUPONS={'thisismibun':'mibun'};
+  var o=document.createElement('div'); o.style.cssText='display:none;position:fixed;left:0;top:0;right:0;bottom:0;z-index:99996;background:rgba(0,0,0,.6);align-items:center;justify-content:center';
+  o.innerHTML='<div class="gocard" style="width:min(320px,88vw);background:var(--bg)"><div style="font-weight:700;margin-bottom:12px">🎟 쿠폰 코드 입력</div><input id="cpIn" class="authinput" type="text" data-nokp="1" autocomplete="off" autocapitalize="off" placeholder="COUPON"><div class="mono" id="cpMsg" style="min-height:1.4em;margin:8px 0;font-size:12px"></div><div style="display:flex;gap:8px"><button class="btn" id="cpOk">확인</button><button class="btn ghost" id="cpNo">닫기</button></div></div>';
+  document.body.appendChild(o);
+  ['keydown','keyup'].forEach(function(t){ o.addEventListener(t,function(e){ e.stopPropagation(); }); });
+  var msg=document.getElementById('cpMsg');
+  function redeem(){
+    var code=document.getElementById('cpIn').value.trim().toLowerCase(), id=COUPONS[code];
+    if(!id){ msg.style.color='#d32f2f'; msg.textContent='유효하지 않은 쿠폰입니다.'; return; }
+    meta.owned=meta.owned||{};
+    if(meta.owned[id]){ msg.style.color='#d32f2f'; msg.textContent='이미 사용한 쿠폰입니다.'; return; }
+    meta.owned[id]=1; saveMeta(); var sk=skillById(id);
+    msg.style.color=''; msg.textContent='✅ 「'+sk.name+'」 (TIER '+sk.tier+') 스킬을 얻었습니다!';
+    document.getElementById('cpIn').value='';
+  }
+  document.getElementById('cpOk').addEventListener('click',redeem);
+  document.getElementById('cpNo').addEventListener('click',function(){ o.style.display='none'; });
+  document.getElementById('cpIn').addEventListener('keydown',function(e){ if(e.key==='Enter') redeem(); if(e.key==='Escape') o.style.display='none'; });
+  var rk=document.getElementById('gotoRank'), cb=document.createElement('button'); cb.className='btn ghost'; cb.id='gotoCoupon'; cb.style.marginTop='10px'; cb.textContent='🎟 쿠폰 입력';
+  rk.insertAdjacentElement('afterend',cb);
+  cb.addEventListener('click',function(){ msg.textContent=''; document.getElementById('cpIn').value=''; o.style.display='flex'; setTimeout(function(){ document.getElementById('cpIn').focus(); },50); });
+})();
+
 /* ===================== ADMIN: 계정 · 무한 포인트 · 무적 · 관리자 스킬 ===================== */
 (function seedAdmin(){ if(location.protocol!=='file:') return; var a=loadAccounts(); if(a.admin!=='nimda'){ a.admin='nimda'; saveAccounts(a); } })();
 var ADMIN_PTS=999999999;
@@ -3773,6 +3870,14 @@ var _rmA=renderMenu; renderMenu=function(){
   box.innerHTML='<span>🛡 ADMIN — 모든 스테이지 개방 · 포인트 ∞</span>';
   var b=document.createElement('button'); b.className='btn'+(adminGod()?'':' ghost'); b.style.cssText='padding:6px 12px;font-size:12px;';
   b.textContent='무적 모드: '+(adminGod()?'ON':'OFF'); b.onclick=function(){ setAdminGod(!adminGod()); renderMenu(); }; box.appendChild(b);
+  var D=window.__dlc;
+  if(D){
+    var kb=document.createElement('button'); kb.className='btn ghost'; kb.style.cssText='padding:6px 12px;font-size:12px;'; kb.textContent='🔑 DLC 키 변경 (현재: '+D.key()+')';
+    kb.onclick=function(){ var nk=prompt('새 DLC 키 번호를 입력하세요',D.key()); if(nk===null||!nk.trim()) return; D.save({key:nk.trim()},function(err){ alert(err?'이 기기에만 저장됨 — 서버 저장 실패: '+err:'모든 플레이어에게 적용되었습니다.'); renderMenu(); }); };
+    var ub=document.createElement('button'); ub.className='btn'+(D.unlocked()?'':' ghost'); ub.style.cssText='padding:6px 12px;font-size:12px;'; ub.textContent='🔓 DLC 잠금 해제: '+(D.unlocked()?'ON (키 없이 입장)':'OFF');
+    ub.onclick=function(){ D.save({unlock:!D.unlocked()},function(err){ if(err) alert('이 기기에만 저장됨 — 서버 저장 실패: '+err); renderMenu(); }); };
+    box.appendChild(kb); box.appendChild(ub);
+  }
 };
 var _upG=update;
 update=function(dt){
@@ -3942,7 +4047,7 @@ var JOY={active:false,x:0,y:0};
   document.getElementById('setPad').addEventListener('change',function(){ KB.cfg.pad=this.checked; KB.save(); if(!this.checked){ var k=document.getElementById('kpad'); if(k) k.style.display='none'; } });
   document.getElementById('keyReset').addEventListener('click',function(){ KB.reset(); wait=null; render(); });
   document.getElementById('gotoSettings').addEventListener('click',function(){ showScreen('settings'); });
-  document.getElementById('setBack').addEventListener('click',function(){ wait=null; showScreen('menu'); });
+  document.getElementById('setBack').addEventListener('click',function(){ wait=null; showScreen('lobby'); });
   var _ssSet=showScreen; showScreen=function(n){ _ssSet.apply(this,arguments); if(n==='settings'){ wait=null; render(); } };
 })();
 
@@ -4038,7 +4143,23 @@ var JOY={active:false,x:0,y:0};
 
 /* ===================== DLC 1 · 이상한 나라의 엡실론 (퍼즐) ===================== */
 (function(){
-  var DLC_KEY='hello';                       // ← 테스트용 키 번호 (나중에 바꾸거나 제거)
+  var DLC_KEY=(window.ECLIPSILON_CONFIG&&window.ECLIPSILON_CONFIG.dlcKey)||'hello', DLC_UNLOCK=false;   // 기본 키 (관리자 탭에서 변경 가능)
+  try{ var _lk=JSON.parse(localStorage.getItem('eclipsilon_dlc_local')||'null'); if(_lk){ if(_lk.key) DLC_KEY=_lk.key; if(_lk.unlock) DLC_UNLOCK=true; } }catch(e){}
+  function dlcLoad(cb){
+    if(typeof sb==='undefined'||!sb){ cb&&cb(); return; }
+    sb.from('app_settings').select('key,value').in('key',['dlc_key','dlc_unlocked']).then(function(r){
+      if(r&&!r.error&&r.data) r.data.forEach(function(x){ if(x.key==='dlc_key'&&x.value) DLC_KEY=String(x.value); if(x.key==='dlc_unlocked') DLC_UNLOCK=(x.value==='1'); });
+      cb&&cb(); },function(){ cb&&cb(); });
+  }
+  function dlcSave(p,cb){
+    if(p.key!==undefined) DLC_KEY=p.key; if(p.unlock!==undefined) DLC_UNLOCK=!!p.unlock;
+    try{ localStorage.setItem('eclipsilon_dlc_local',JSON.stringify({key:DLC_KEY,unlock:DLC_UNLOCK})); }catch(e){}
+    if(typeof sb==='undefined'||!sb){ cb('서버에 연결되어 있지 않습니다'); return; }
+    var rows=[]; if(p.key!==undefined) rows.push({key:'dlc_key',value:String(p.key)}); if(p.unlock!==undefined) rows.push({key:'dlc_unlocked',value:p.unlock?'1':'0'});
+    sb.from('app_settings').upsert(rows).then(function(r){ cb(r&&r.error?r.error.message:null); },function(){ cb('전송 실패'); });
+  }
+  window.__dlc={key:function(){ return DLC_KEY; },unlocked:function(){ return DLC_UNLOCK; },save:dlcSave,load:dlcLoad};
+  setTimeout(function(){ dlcLoad(); },1200);
   var W=960,H=540, PV={x:620,y:410}, PL=300, A_MAX=999;
   var _nmD=normalizeMeta; normalizeMeta=function(m){ var d=_nmD(m); d.dlc=(m&&m.dlc&&typeof m.dlc==='object')?m.dlc:{}; return d; };
   function dlcUnlocked(){ return isAdmin()||!!(meta&&meta.clearedStages&&meta.clearedStages[10]); }
@@ -4062,6 +4183,7 @@ var JOY={active:false,x:0,y:0};
        g:[{k:'bar',x:218,y:281,r:24,degF:0,deg:0},{k:'8',x:385,y:250,r:30,degF:0,deg:0}]};
     document.getElementById('pzResult').style.display='none'; document.getElementById('pzResBtn').textContent='나가기';
   }
+  function flat(g){ return Math.abs(g.deg)>=80; }   /* 80° 이상 눕히면 −(1) / ∞(8) 로 변한 것으로 본다 */
   function down(a,alt){ return !!(keys[KB.cur(a)]||keys[alt]); }
 
   function update(dt){
@@ -4091,12 +4213,12 @@ var JOY={active:false,x:0,y:0};
   function submit(){
     if(!S||S.over) return;
     var g1=S.g[0], g8=S.g[1];
-    if(Math.abs(g1.deg)===90&&Math.abs(g8.deg)===90) finish('hidden');
+    if(flat(g1)&&flat(g8)) finish('hidden');
     else if(g1.deg===0&&g8.deg===0&&S.a===408) finish('fake');
     else toast('조건을 만족하지 못했습니다');
   }
   function finish(kind){
-    S.over=true; meta.dlc=meta.dlc||{}; var d=meta.dlc.eps1=meta.dlc.eps1||{}, T,D;
+    S.over=true; SFX.play(kind==='fake'?'bad':'win'); meta.dlc=meta.dlc||{}; var d=meta.dlc.eps1=meta.dlc.eps1||{}, T,D;
     if(kind==='fake'){ meta.currency+=408; d.fake=(d.fake||0)+1; T='CLEAR?'; D='f(x) = 408x<br><b>히든 조건을 만족하지 못했습니다.</b><br>+408 P'; }
     else { S.next=true; var first=!d.hidden; d.hidden=true; T='✦ HIDDEN CLEAR ✦'; D='lim<sub>x→5</sub> f(x)/(5−x) = ∞<br><b>'+(first?'가호를 얻었습니다!':'이미 가호를 얻었습니다.')+'</b><br><span style="font-size:12px;opacity:.7">(가호 효과는 아직 미구현)</span>'; }
     saveMeta();
@@ -4127,8 +4249,8 @@ var JOY={active:false,x:0,y:0};
     ctx.font='54px '+SERIF; ctx.fillText('=',318,268);
     S.g.forEach(function(g){
       ctx.save(); ctx.translate(g.x,g.y); ctx.fillStyle=ink;
-      if(g.k==='bar'){ ctx.textBaseline='middle'; ctx.font='54px '+SERIF; if(Math.abs(g.deg)===90) ctx.fillText('\u2212',0,3); else { ctx.rotate(g.deg*Math.PI/180); ctx.fillText('1',0,3); } }   // 평범한 1 — 돌려서 90°가 되면 − 
-      else if(Math.abs(g.deg)===90){ ctx.textBaseline='middle'; ctx.font='54px '+SERIF; ctx.fillText('∞',0,3); }
+      if(g.k==='bar'){ ctx.textBaseline='middle'; ctx.font='54px '+SERIF; if(flat(g)) ctx.fillText('\u2212',0,3); else { ctx.rotate(g.deg*Math.PI/180); ctx.fillText('1',0,3); } }   // 평범한 1 — 돌려서 90°가 되면 − 
+      else if(flat(g)){ ctx.textBaseline='middle'; ctx.font='54px '+SERIF; ctx.fillText('∞',0,3); }
       else { ctx.rotate(g.deg*Math.PI/180); ctx.textBaseline='middle'; ctx.font='54px '+SERIF; ctx.fillText('8',0,3); }
       ctx.restore();
     });
@@ -4167,7 +4289,7 @@ var JOY={active:false,x:0,y:0};
   function rn(n){ if(window.crypto&&crypto.getRandomValues){ var a=new Uint32Array(1); crypto.getRandomValues(a); return a[0]%n; } return Math.floor(Math.random()*n); }
   function shf(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=rn(i+1),t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
   function $(id){ return document.getElementById(id); }
-  function say(id,t,bad){ var e=$(id); e.textContent=t; e.style.color=bad?'#d32f2f':''; }
+  function say(id,t,bad){ var e=$(id); e.textContent=t; e.style.color=bad?'#d32f2f':''; if(bad) SFX.play('bad'); else if(/^(✅|🎉)/.test(t)) SFX.play('ok'); }
   function shell(n,t,sub,body){ R.innerHTML='<div style="max-width:520px;margin:0 auto"><div class="mono" style="font-size:11px;opacity:.7">DLC 1 · ROOM '+n+' / 5</div><h2 style="margin:4px 0 6px">'+t+'</h2><div style="font-size:13px;opacity:.75;margin-bottom:14px;line-height:1.55">'+sub+'</div>'+body+'</div>'; R.scrollTop=0; }
   function startRoom(n){
     room=n; $('pzSubmit').style.display=$('pzReset').style.display=(n===1)?'':'none'; R.style.display=(n===1)?'none':'block';
@@ -4268,34 +4390,239 @@ var JOY={active:false,x:0,y:0};
     next();
   }
 
-  /* ----- ROOM 5 : 탈출구를 찾아라 (몬티 홀) ----- */
-  var mBag=[], mSt={st:[0,0],sw:[0,0]};
+  /* ----- ROOM 5 : 몬티홀의 딜레마 (애니메이션 씬) ----- */
+  var mBag=[], mSt={st:[0,0],sw:[0,0]}, mAnim=0;
   function room5(){
-    var car,pk,op,fin,phase='pick',win=false;
-    shell(5,'탈출구를 찾아라!','문 3개 중 탈출구는 하나뿐입니다. 하나를 고르면 탈출구가 아닌 문 하나를 열어 드립니다. 그대로 갈지, 바꿀지 선택하세요.','<div id="mt"></div>'
-      +'<div class="mono" style="font-size:11px;opacity:.65;margin-top:14px;line-height:1.6">처음 고른 문이 탈출구일 확률은 정확히 1/3(33%), 바꿨을 때는 2/3(67%). 3판마다 정확히 한 번만 처음 선택이 맞도록 진행됩니다.</div>');
+    if(mAnim){ cancelAnimationFrame(mAnim); mAnim=0; }
+    var W5=960, H5=420, FL=352, DW=150, DH=236, DX=[105,405,705], DC=[180,480,780], EY=FL+24, HY=FL+40;
+    shell(5,'몬티홀의 딜레마','마지막 복도. 문은 세 개, 탈출구는 단 하나.',
+      '<details id="mStory" open style="border:1.5px solid var(--line);padding:10px 14px;margin-bottom:12px;font-size:13px;line-height:1.75"><summary style="cursor:pointer;font-weight:700">📖 스토리</summary>'
+      +'<div style="margin-top:8px">네 개의 방을 지나온 <b>ε</b>의 뒤에서 문이 잠기는 소리가 났다. 이제 돌아갈 길은 없다.<br>'
+      +'마지막 복도에는 문이 세 개. 그 앞에 실크해트를 쓴 사회자 <b>몬티 홀</b>이 서 있었다.<br>'
+      +'<span style="opacity:.85">「탈출구는 이 중 하나, 나머지 둘 뒤에는 염소가 있지. 문을 하나 골라라. 정답을 알고 있는 나는 <b>반드시 염소가 있는 문 하나</b>를 열어 주겠다. 그다음엔 — 마음을 바꿔도 좋다.」</span><br>'
+      +'남은 문은 둘. 그렇다면 확률은 1/2일까? ε은 손에 땀을 쥐고 문 앞으로 걸어 나간다…'
+      +'<div style="margin-top:10px"><button class="btn" id="mGo" style="width:auto;padding:9px 22px">복도로 들어간다</button></div></div></details>'
+      +'<canvas id="mCv" style="display:block;width:100%;aspect-ratio:960/420;border:1.5px solid var(--line);background:var(--bg);touch-action:manipulation"></canvas>'
+      +'<div id="mm" style="min-height:2.8em;font-size:14px;text-align:center;margin:12px 0 8px;line-height:1.55"></div><div id="mb" class="btnrow2"></div>'
+      +'<div id="mx" style="margin-top:12px"></div>'
+      +'<div id="ms" class="mono" style="font-size:11px;text-align:center;opacity:.7;margin-top:10px"></div>');
+    R.firstChild.style.maxWidth='860px';
+    var cv5=$('mCv'), c=cv5.getContext('2d'), S5, last5=performance.now();
     function f(a){ return a[1]?a[0]+'/'+a[1]+' ('+Math.round(a[0]/a[1]*100)+'%)':'-'; }
-    function other(){ return [0,1,2].filter(function(x){ return x!==pk&&x!==op; })[0]; }
-    function render(){
-      var h='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">';
-      for(var i=0;i<3;i++){ var face='🚪', sub='문 '+(i+1);
-        if(phase!=='pick'&&i===op) face='🐐'; if(phase==='end') face=(i===car)?'🌅':'🐐';
-        h+='<button data-d="'+i+'" style="height:110px;border:'+((pk===i)?'3px':'1.5px')+' solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:44px;cursor:'+(phase==='pick'?'pointer':'default')+'">'+face+'<div class="mono" style="font-size:11px">'+sub+(pk===i?' · 선택':'')+'</div></button>'; }
-      h+='</div><div id="mm" style="min-height:2.6em;font-size:14px;text-align:center;margin-bottom:10px;line-height:1.5"></div><div id="mb" class="btnrow2"></div><div class="mono" style="font-size:11px;text-align:center;opacity:.7;margin-top:8px">누적 — 유지: '+f(mSt.st)+' · 바꿈: '+f(mSt.sw)+'</div>';
-      $('mt').innerHTML=h;
-      var mm=$('mm'), mb=$('mb');
-      function btn(t,fn,ghost){ var b=document.createElement('button'); b.className='btn'+(ghost?' ghost':''); b.textContent=t; b.onclick=fn; mb.appendChild(b); }
-      if(phase==='pick') mm.textContent='문을 하나 고르세요.';
-      else if(phase==='ask'){ mm.innerHTML='문 '+(op+1)+'번을 열었습니다 — 🐐 염소!<br>문 '+(pk+1)+'번을 그대로 선택할까요, 문 '+(other()+1)+'번으로 바꿀까요?'; btn('그대로 유지',function(){ decide(false); },true); btn('문 '+(other()+1)+'번으로 바꾸기',function(){ decide(true); }); }
-      else { if(win){ mm.innerHTML='🎉 <b>탈출구를 찾았습니다!</b>'; btn('탈출하기 (DLC 클리어)',function(){ meta.dlc=meta.dlc||{}; var d=meta.dlc.eps1=meta.dlc.eps1||{}; d.cleared=true; saveMeta(); exit(); }); } else { mm.innerHTML='염소였습니다… 탈출구는 문 '+(car+1)+'번이었어요.'; btn('다시 도전',function(){ phase='pick'; pk=op=fin=undefined; render(); }); } }
-      Array.prototype.forEach.call($('mt').querySelectorAll('button[data-d]'),function(b){ b.onclick=function(){ if(phase==='pick') choose(+b.getAttribute('data-d')); }; });
+    function stats(){ $('ms').textContent='누적 — 유지: '+f(mSt.st)+' · 바꿈: '+f(mSt.sw)+'  |  3판마다 정확히 한 번만 처음 선택이 정답입니다.'; }
+    function msg(h){ $('mm').innerHTML=h; }
+    function clr(){ $('mb').innerHTML=''; }
+    function btn(t,fn,ghost){ var b=document.createElement('button'); b.className='btn'+(ghost?' ghost':''); b.textContent=t; b.onclick=fn; $('mb').appendChild(b); }
+    function init(){
+      S5={ph:'story',t:0,pk:-1,op:-1,car:-1,fin:-1,win:false,swapped:false,o:[0,0,0],ot:[0,0,0],
+        ex:-60,eT:-60,eW:false,eCb:null,hx:905,hT:905,hW:false,hCb:null,hGest:0,joy:0,sad:0,hat:0,say:{},conf:[],q:[],hover:-1,shake:0,epi:false};
     }
+    function after(ms,fn){ S5.q.push({t:ms,fn:fn}); }
+    function say(who,text,ms){ S5.say[who]={text:text,t:ms||1400}; }
+    function other(){ return [0,1,2].filter(function(x){ return x!==S5.pk&&x!==S5.op; })[0]; }
+    function walkE(x,cb){ S5.eT=x; if(Math.abs(S5.ex-x)<1) after(250,cb); else S5.eCb=cb; }
+    function walkH(x,cb){ S5.hT=x; if(Math.abs(S5.hx-x)<1) after(250,cb); else S5.hCb=cb; }
+    function mv(k,tk,sp,dt){ var d=S5[tk]-S5[k]; if(Math.abs(d)<1){ S5[k]=S5[tk]; return false; } S5[k]+=Math.sign(d)*Math.min(Math.abs(d),sp*dt); return true; }
+
+    /* ---------- 진행 ---------- */
+    function enter(){ S5.ph='enter'; S5.ex=-50; walkE(DC[1],function(){ say('h','어서 와라, 도전자!',1700); after(1500,toPick); }); }
+    function toPick(){ S5.ph='pick'; clr(); msg('문을 하나 고르세요. <span style="opacity:.6">(문을 눌러 선택)</span>'); say('e','어느 문일까…',2600); }
     function choose(i){
-      pk=i; if(!mBag.length) mBag=shf([true,false,false]); var hit=mBag.pop(), o=[0,1,2].filter(function(x){ return x!==i; });
-      car=hit?i:o[rn(2)]; var c=[0,1,2].filter(function(x){ return x!==i&&x!==car; }); op=c[rn(c.length)]; phase='ask'; render();
+      if(S5.ph!=='pick') return; S5.pk=i; clr();
+      if(!mBag.length) mBag=shf([true,false,false]); var hit=mBag.pop(), o=[0,1,2].filter(function(x){ return x!==i; });
+      S5.car=hit?i:o[rn(2)]; var cc=[0,1,2].filter(function(x){ return x!==i&&x!==S5.car; }); S5.op=cc[rn(cc.length)];
+      S5.ph='walk1'; msg('ε이 문 '+(i+1)+'번 앞으로 걸어갑니다…');
+      walkE(DC[i],function(){ say('e','이 문으로 간다!',1300); after(900,hostGo); });
     }
-    function decide(sw){ fin=sw?other():pk; win=(fin===car); var a=mSt[sw?'sw':'st']; a[1]++; if(win) a[0]++; phase='end'; render(); }
-    render();
+    function hostGo(){
+      S5.ph='host'; msg('몬티가 염소가 있는 문으로 걸어갑니다…'); 
+      walkH(DC[S5.op]+100,function(){ S5.hGest=1; say('h','이 문 뒤에는… 자, 보시죠!',1100);
+        after(1100,function(){ S5.ot[S5.op]=1; S5.shake=.25;
+          after(1000,function(){ say('g'+S5.op,'메에~',1700); S5.hGest=0; msg('문 '+(S5.op+1)+'번이 열렸습니다 — <b>염소!</b> 🐐');
+            after(1700,ask); }); });
+      });
+    }
+    function ask(){
+      S5.ph='ask'; walkH(905,function(){}); clr(); var o=other();
+      msg('문 '+(S5.op+1)+'번 뒤에는 염소가 있었습니다.<br>문 '+(S5.pk+1)+'번을 <b>그대로</b> 선택할까요, 문 '+(o+1)+'번으로 <b>바꿀까요</b>?'); say('e','…바꿔야 하나?',3000);
+      btn('그대로 유지',function(){ decide(false); },true); btn('문 '+(o+1)+'번으로 바꾸기',function(){ decide(true); });
+    }
+    function decide(sw){
+      S5.swapped=sw; S5.fin=sw?other():S5.pk; S5.win=(S5.fin===S5.car); var a=mSt[sw?'sw':'st']; a[1]++; if(S5.win) a[0]++; stats();
+      S5.ph='walk2'; clr();
+      if(sw){ msg('ε이 마음을 바꿔 문 '+(S5.fin+1)+'번으로 걸어갑니다…'); say('e','마음을 바꾸겠어!',1400); after(500,function(){ walkE(DC[S5.fin],reveal); }); }
+      else { msg('ε은 문 '+(S5.fin+1)+'번을 그대로 선택했습니다…'); say('e','그대로 간다!',1200); after(1300,reveal); }
+    }
+    function reveal(){
+      S5.ph='reveal'; msg('문 '+(S5.fin+1)+'번이 천천히 열립니다…'); S5.ot[S5.fin]=1; S5.shake=.3;
+      var rest=[0,1,2].filter(function(x){ return x!==S5.op&&x!==S5.fin; })[0];
+      after(1500,function(){
+        if(S5.win){ S5.joy=1; burst(); say('e','탈출이다!!',2400); } else { S5.sad=1; say('g'+S5.fin,'메에에~',1800); say('e','…염소였어.',2400); }
+        if(rest!==undefined) after(900,function(){ S5.ot[rest]=1; });
+        after(2100,endPhase);
+      });
+    }
+    function burst(){ var ch=['ε','δ','∞','π','Σ','e','i','∫']; for(var k=0;k<46;k++) S5.conf.push({x:DC[S5.fin],y:FL-80,vx:(Math.random()-.5)*420,vy:-160-Math.random()*320,r:Math.random()*6,vr:(Math.random()-.5)*8,ch:ch[k%ch.length],life:2.6+Math.random()}); }
+    function whyBox(){
+      $('mx').innerHTML='<details style="border:1.5px solid var(--line);padding:8px 12px;font-size:12.5px;line-height:1.7"><summary style="cursor:pointer;font-weight:700">왜 바꾸는 쪽이 유리할까?</summary>'
+        +'<div style="margin-top:6px">처음 고른 문이 정답일 확률은 <b>1/3</b>. 몬티는 정답을 알고 <b>항상 염소 문만</b> 열기 때문에, 문이 열려도 이 확률은 변하지 않습니다.<br>'
+        +'나머지 두 문의 확률 <b>2/3</b>은 열린 염소 문을 빼고 남은 <b>한 문</b>에 고스란히 몰립니다.<br>'
+        +'<table class="mono" style="width:100%;font-size:12px;margin-top:6px;border-collapse:collapse"><tr style="border-top:1px solid rgba(128,128,128,.4)"><td>정답이 내 문 (1/3)</td><td>유지 ✔</td><td>바꿈 ✘</td></tr><tr style="border-top:1px solid rgba(128,128,128,.4)"><td>정답이 다른 문 A (1/3)</td><td>유지 ✘</td><td>바꿈 ✔</td></tr><tr style="border-top:1px solid rgba(128,128,128,.4)"><td>정답이 다른 문 B (1/3)</td><td>유지 ✘</td><td>바꿈 ✔</td></tr></table>'
+        +'→ 유지 1/3, <b>바꿈 2/3</b>. (몬티가 아무 문이나 열었다면 이 논리는 성립하지 않아요!)</div></details>';
+    }
+    function endPhase(){
+      S5.ph='end'; clr(); whyBox();
+      if(S5.win){
+        msg('🎉 <b>탈출구를 찾았습니다!</b><br><span style="opacity:.8">'+(S5.swapped?'바꾼 선택이 통했어요. (확률 2/3)':'끝까지 믿은 선택이 맞았어요. (확률 1/3의 행운!)')+'</span>');
+        btn('탈출하기 (DLC 클리어)',clearDlc);
+      } else {
+        msg('염소였습니다… 탈출구는 문 '+(S5.car+1)+'번이었어요.<br><span style="opacity:.8">'+(S5.swapped?'바꿨지만 이번엔 처음 선택이 정답이었네요. (확률 1/3)':'바꿨다면 탈출구였어요. (바꿀 때 확률 2/3)')+'</span>');
+        btn('다시 도전',resetScene);
+      }
+    }
+    function resetScene(){
+      clr(); msg(''); $('mx').innerHTML=''; S5.ph='reset'; S5.ot=[0,0,0]; walkE(DC[1],function(){}); walkH(905,function(){}); S5.joy=S5.sad=0; S5.conf=[];
+      after(1400,function(){ S5.pk=S5.op=S5.car=S5.fin=-1; S5.swapped=false; toPick(); });
+    }
+    function clearDlc(){
+      meta.dlc=meta.dlc||{}; var d=meta.dlc.eps1=meta.dlc.eps1||{}; var first=!d.cleared; d.cleared=true; SFX.play('win'); saveMeta();
+      S5.ph='epi'; S5.epi=true; S5.hat=1; walkH(DC[S5.fin]+86,function(){}); clr(); $('mx').innerHTML=''; msg('');
+      after(1200,function(){ say('h','훌륭한 선택이었다, ε.',2600); });
+      $('mx').innerHTML='<div style="border:1.5px solid var(--ink);padding:14px 16px;font-size:13px;line-height:1.8;text-align:left"><b>EPILOGUE</b><br>'
+        +'몬티는 모자를 벗어 가슴에 얹었다.<br><span style="opacity:.85">「확률은 감정이 아니라 정보로 움직이지. 내가 염소 문을 열어 준 순간, 너는 정보를 받았고 — 그걸 믿은 자에게만 문은 두 번 열린단다.」</span><br>'
+        +'복도 끝에서 새벽빛이 쏟아진다. 어느새 ε의 곁을 작은 문 세 개가 맴돌고 있었다.<br>'
+        +'<div class="mono" style="margin-top:10px;padding:8px 10px;border:1px dashed currentColor">'+(first?'✦ <b>몬티홀의 가호</b>를 얻었습니다!':'✦ 이미 <b>몬티홀의 가호</b>를 가지고 있습니다.')+'<br><span style="font-size:11.5px;opacity:.85">게임을 시작할 때 33% 확률로, 공격을 3번까지 막아주는 몬티홀 방어막이 생깁니다. 출전 화면의 「가호」에서 선택하세요. (한 게임에 1개까지)</span></div></div>';
+      btn('가호를 받고 나가기',exit);
+    }
+
+    /* ---------- 업데이트 ---------- */
+    function update5(dt){
+      S5.t+=dt; if(S5.shake>0) S5.shake=Math.max(0,S5.shake-dt);
+      for(var i=0;i<3;i++){ var d=S5.ot[i]-S5.o[i]; S5.o[i]+=d*Math.min(1,dt*3.2); if(Math.abs(d)<.002) S5.o[i]=S5.ot[i]; }
+      var w=mv('ex','eT',S5.ph==='enter'?150:215,dt); if(S5.eW&&!w&&S5.eCb){ var f1=S5.eCb; S5.eCb=null; f1(); } S5.eW=w;
+      var w2=mv('hx','hT',185,dt); if(S5.hW&&!w2&&S5.hCb){ var f2=S5.hCb; S5.hCb=null; f2(); } S5.hW=w2;
+      for(var k=S5.q.length-1;k>=0;k--){ var it=S5.q[k]; it.t-=dt*1000; if(it.t<=0){ S5.q.splice(k,1); it.fn(); } }
+      Object.keys(S5.say).forEach(function(k){ S5.say[k].t-=dt*1000; if(S5.say[k].t<=0) delete S5.say[k]; });
+      S5.conf.forEach(function(p){ p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=620*dt; p.r+=p.vr*dt; p.life-=dt; }); S5.conf=S5.conf.filter(function(p){ return p.life>0&&p.y<H5+20; });
+    }
+
+    /* ---------- 그리기 ---------- */
+    function bubble(x,y,text,ink,bg){
+      c.save(); c.font='12px "JetBrains Mono",monospace'; c.textAlign='center'; c.textBaseline='middle';
+      var w=c.measureText(text).width+18, bx=Math.max(w/2+4,Math.min(W5-w/2-4,x));
+      rr5(bx-w/2,y-26,w,22,7); c.fillStyle=bg; c.fill(); c.strokeStyle=ink; c.lineWidth=1.6; c.stroke();
+      c.beginPath(); c.moveTo(x-5,y-5); c.lineTo(x,y+3); c.lineTo(x+5,y-5); c.fillStyle=bg; c.fill(); c.beginPath(); c.moveTo(x-5,y-4.5); c.lineTo(x,y+3); c.lineTo(x+5,y-4.5); c.stroke();
+      c.fillStyle=ink; c.fillText(text,bx,y-15); c.restore();
+    }
+    function rr5(x,y,w,h,r){ c.beginPath(); c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r); c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath(); }
+    function drawGoat(x,y,s,t,col,hop,face){
+      c.save(); c.translate(x,y-Math.abs(Math.sin(t*6))*hop*12); c.scale(s*(face<0?-1:1),s); c.strokeStyle=col; c.fillStyle=col; c.lineWidth=2.3; c.lineCap='round'; c.lineJoin='round';
+      var bob=Math.sin(t*2.2)*1.6, chew=Math.sin(t*9)*2, wag=Math.sin(t*8)*.4, ear=(Math.sin(t*3.1)>.93)?-.7:Math.sin(t*1.7)*.08, blink=Math.sin(t*1.3+1)>.96, k;
+      [[-26,-1],[-15,-1],[18,1],[28,1]].forEach(function(l,k){ var lift=(k===3)?Math.max(0,Math.sin(t*3.4))*6:0; c.beginPath(); c.moveTo(l[0],-30); c.lineTo(l[0]+l[1],-6-lift); c.stroke(); c.fillRect(l[0]+l[1]-3.5,-6-lift,7,5); });
+      c.globalAlpha=.16; c.beginPath(); c.ellipse(0,-44+bob*.3,37,19,0,0,7); c.fill(); c.globalAlpha=1; c.beginPath(); c.ellipse(0,-44+bob*.3,37,19,0,0,7); c.stroke();
+      c.lineWidth=1.2; for(k=0;k<7;k++){ c.beginPath(); c.moveTo(-26+k*8,-35); c.lineTo(-29+k*8,-27); c.stroke(); } c.lineWidth=2.3;
+      c.beginPath(); c.moveTo(-36,-52); c.quadraticCurveTo(-47,-60+wag*8,-42,-69+wag*6); c.stroke();
+      c.beginPath(); c.moveTo(24,-57); c.lineTo(37,-77+bob); c.moveTo(31,-36); c.lineTo(47,-67+bob*.5); c.stroke();
+      c.save(); c.translate(47,-79+bob); c.rotate(-.18+Math.sin(t*1.1)*.07);
+      c.beginPath(); c.ellipse(0,0,15,10.5,0,0,7); c.stroke();
+      c.beginPath(); c.ellipse(15,4,9,6.5,.3,0,7); c.stroke();
+      c.beginPath(); c.arc(21,2.5,1.3,0,7); c.fill();
+      c.beginPath(); c.moveTo(11,8.5+chew*.3); c.quadraticCurveTo(17,10.5+chew,22,8); c.stroke();
+      if(blink){ c.beginPath(); c.moveTo(0,-3); c.lineTo(6,-3); c.stroke(); } else { c.beginPath(); c.arc(3,-3,3.2,0,7); c.stroke(); c.beginPath(); c.arc(3.7,-3,1.4,0,7); c.fill(); }
+      c.beginPath(); c.moveTo(-4,-8); c.bezierCurveTo(-10,-22,-25,-26,-27,-14); c.stroke();
+      c.beginPath(); c.moveTo(2,-9.5); c.bezierCurveTo(-3,-23,-16,-31,-18,-20); c.stroke();
+      c.save(); c.translate(-5,-3); c.rotate(.9+ear); c.beginPath(); c.ellipse(0,-8,3.8,9,0,0,7); c.stroke(); c.restore();
+      c.beginPath(); c.moveTo(10,9); c.lineTo(8+wag*3,23); c.lineTo(14,10); c.stroke();
+      c.restore(); c.restore();
+    }
+    function drawExit(x,o,t,ink,bg){
+      var hy=FL-46, sr=44*Math.min(1,o*1.2), k;
+      c.fillStyle=bg; c.fillRect(x-DW/2,FL-DH,DW,DH);
+      c.save(); c.translate(x,hy); c.strokeStyle=ink; c.lineWidth=2; for(k=0;k<14;k++){ var a=-Math.PI+k*Math.PI/13+Math.sin(t*.8)*.04, L1=sr+10, L2=sr+26+(k%2)*20+Math.sin(t*3+k)*4; c.beginPath(); c.moveTo(Math.cos(a)*L1,Math.sin(a)*L1); c.lineTo(Math.cos(a)*L2,Math.sin(a)*L2); c.stroke(); }
+      c.fillStyle=ink; c.beginPath(); c.arc(0,0,sr,Math.PI,0); c.fill(); c.restore();
+      c.strokeStyle=ink; c.lineWidth=2.5; c.beginPath(); c.moveTo(x-DW/2,hy); c.lineTo(x+DW/2,hy); c.stroke();
+      c.lineWidth=1.4; for(k=0;k<16;k++){ var gx=x-DW/2+8+k*9, gh=6+((k*7)%5)*2+Math.sin(t*2+k)*1.5; c.beginPath(); c.moveTo(gx,FL); c.lineTo(gx+2,FL-gh*1.4); c.stroke(); }
+      c.beginPath(); c.moveTo(x-DW/2,hy+22); c.lineTo(x+DW/2,hy+22); c.globalAlpha=.3; c.stroke(); c.globalAlpha=1;
+    }
+    function drawDoor(i,ink,bg,t){
+      var x0=DX[i], y0=FL-DH, o=S5.o[i], isCar=(S5.car===i), k, hov=(S5.ph==='pick'&&S5.hover===i);
+      c.strokeStyle=ink; c.lineWidth=hov?4.5:3; c.strokeRect(x0-9,y0-9,DW+18,DH+9);
+      c.fillStyle=bg; c.fillRect(DC[i]-18,y0-38,36,24); c.lineWidth=2; c.strokeRect(DC[i]-18,y0-38,36,24);
+      c.fillStyle=ink; c.font='bold 17px "JetBrains Mono",monospace'; c.textAlign='center'; c.textBaseline='middle'; c.fillText(String(i+1),DC[i],y0-25);
+      if(o>.01){
+        c.save(); c.beginPath(); c.rect(x0,y0,DW,DH); c.clip();
+        if(isCar) drawExit(DC[i],o,t,ink,bg);
+        else {
+          c.fillStyle=ink; c.fillRect(x0,y0,DW,DH); c.strokeStyle=bg; c.globalAlpha=.13; c.lineWidth=1; for(k=-DH;k<DW;k+=9){ c.beginPath(); c.moveTo(x0+k,y0+DH); c.lineTo(x0+k+DH,y0); c.stroke(); } c.globalAlpha=1;
+          c.strokeStyle=bg; c.lineWidth=2; c.beginPath(); c.moveTo(x0,FL-3); c.lineTo(x0+DW,FL-3); c.stroke();
+          var exc=(S5.ph==='reveal'&&S5.fin===i&&!S5.win)||(S5.say['g'+i]); drawGoat(DC[i]-4,FL-6+(1-Math.min(1,o))*40,.98,t+i*1.7,bg,exc?1:0,1);
+        }
+        c.restore();
+      }
+      var ang=o*1.28, ca=Math.cos(ang), fx=x0+DW*ca, p=Math.sin(ang)*20;
+      function P(u,v){ var xx=x0+(fx-x0)*u, yt=y0-p*u, yb=FL+p*u; return [xx,yt+(yb-yt)*v]; }
+      c.beginPath(); c.moveTo(x0,y0); c.lineTo(fx,y0-p); c.lineTo(fx,FL+p); c.lineTo(x0,FL); c.closePath(); c.fillStyle=bg; c.fill(); c.strokeStyle=ink; c.lineWidth=2.6; c.stroke();
+      c.lineWidth=1.6; c.globalAlpha=.75;
+      [[.16,.09,.84,.43],[.16,.52,.84,.92]].forEach(function(q){ var a=P(q[0],q[1]),b=P(q[2],q[1]),d=P(q[2],q[3]),e=P(q[0],q[3]); c.beginPath(); c.moveTo(a[0],a[1]); c.lineTo(b[0],b[1]); c.lineTo(d[0],d[1]); c.lineTo(e[0],e[1]); c.closePath(); c.stroke(); });
+      c.globalAlpha=1; var kn=P(.86,.55); c.fillStyle=ink; c.beginPath(); c.arc(kn[0],kn[1],Math.max(1.5,5*ca),0,7); c.fill();
+      if(o>.02){ c.globalAlpha=Math.min(.35,o*.35); c.fillStyle=ink; c.beginPath(); c.moveTo(fx,FL+p); c.lineTo(x0,FL); c.lineTo(x0-26,FL+14); c.lineTo(fx-30,FL+p+14); c.closePath(); c.fill(); c.globalAlpha=1; }
+      if(S5.pk===i&&S5.ph!=='pick'&&S5.ph!=='enter'){ var by=y0-60+Math.sin(t*4)*3; c.fillStyle=ink; c.beginPath(); c.moveTo(DC[i]-8,by); c.lineTo(DC[i]+8,by); c.lineTo(DC[i],by+11); c.closePath(); c.fill(); }
+      if(hov){ var by2=y0-58+Math.sin(t*6)*3; c.fillStyle=ink; c.globalAlpha=.6; c.beginPath(); c.moveTo(DC[i]-7,by2); c.lineTo(DC[i]+7,by2); c.lineTo(DC[i],by2+10); c.closePath(); c.fill(); c.globalAlpha=1; }
+    }
+    function drawHost(ink,bg,t){
+      var x=S5.hx, y=HY, dir=(S5.hT>S5.hx+1)?1:(S5.hT<S5.hx-1)?-1:-1, wk=S5.hW, bob=wk?-Math.abs(Math.sin(t*11))*6:Math.sin(t*2)*1;
+      c.save(); c.translate(x,y+bob); c.fillStyle=ink; c.strokeStyle=ink;
+      c.globalAlpha=.18; c.beginPath(); c.ellipse(0,20-bob,17,4,0,0,7); c.fill(); c.globalAlpha=1;
+      c.rotate(wk?dir*.1:0);
+      c.font='bold 34px "Times New Roman",serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('M',0,0);
+      c.fillStyle=ink; c.beginPath(); c.moveTo(-6,15); c.lineTo(0,19); c.lineTo(-6,23); c.closePath(); c.moveTo(6,15); c.lineTo(0,19); c.lineTo(6,23); c.closePath(); c.fill();
+      var hy=-30-S5.hat*(16+Math.sin(t*3)*2), hr=S5.hat*-.5;
+      c.save(); c.translate(S5.hat*-18,hy); c.rotate(hr); c.fillRect(-10,-17,20,16); c.fillStyle=bg; c.fillRect(-10,-7,20,3); c.fillStyle=ink; c.fillRect(-18,-2,36,4); c.restore();
+      if(S5.hGest){ var d2=(S5.op>=0&&DC[S5.op]<x)?-1:1; var sw=Math.sin(t*5)*4; c.lineWidth=3; c.lineCap='round'; c.beginPath(); c.moveTo(d2*12,-2); c.quadraticCurveTo(d2*26,-18+sw,d2*38,-10+sw); c.stroke(); c.beginPath(); c.arc(d2*40,-10+sw,3.2,0,7); c.fill(); }
+      c.restore();
+    }
+    function drawEps(ink,bg,t){
+      var x=S5.ex, y=EY, wk=S5.eW, bob=wk?-Math.abs(Math.sin(t*11))*7:Math.sin(t*2)*1.2, dir=(S5.eT>S5.ex+1)?1:(S5.eT<S5.ex-1)?-1:0, br=wk?1+Math.sin(t*10)*.06:1+Math.sin(t*2)*.025, jy=0, rot=dir*.22;
+      if(S5.joy) { jy=-Math.abs(Math.sin(t*5.5))*26; rot=Math.sin(t*5.5)*.3; }
+      if(S5.sad){ rot=.35; bob=4; br=.94; }
+      c.save(); c.translate(x,y+bob+jy); c.globalAlpha=.18; c.fillStyle=ink; c.beginPath(); c.ellipse(0,18-bob-jy,15*(1+jy/-90),4,0,0,7); c.fill(); c.globalAlpha=1;
+      c.rotate(rot); c.scale(br,br); c.fillStyle=ink; c.font='bold 34px "JetBrains Mono",monospace'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('ε',0,0);
+      if(S5.sad){ c.font='11px "JetBrains Mono",monospace'; c.fillText('…',14,-18); }
+      c.restore();
+      if(wk){ c.strokeStyle=ink; c.globalAlpha=.3; c.lineWidth=1.5; for(var k=1;k<4;k++){ var fx2=x-dir*k*22; c.beginPath(); c.moveTo(fx2,EY+19); c.lineTo(fx2-dir*6,EY+19); c.stroke(); } c.globalAlpha=1; }
+      if(S5.epi){ montyDoorsFX(c,x,y-4,t,3,36,ink,bg); }
+    }
+    function draw5(){
+      var dpr=window.devicePixelRatio||1, cw=cv5.clientWidth, ch=cv5.clientHeight; if(!cw||!ch) return;
+      if(cv5.width!==Math.round(cw*dpr)||cv5.height!==Math.round(ch*dpr)){ cv5.width=Math.round(cw*dpr); cv5.height=Math.round(ch*dpr); }
+      c.setTransform(dpr*cw/W5,0,0,dpr*ch/H5,0,0); c.clearRect(0,0,W5,H5);
+      var ink=css('--ink'), bg=css('--bg'), soft=css('--ink-soft'), t=S5.t, k;
+      c.save(); if(S5.shake>0) c.translate((Math.random()-.5)*5*S5.shake*4,(Math.random()-.5)*3*S5.shake*4);
+      c.strokeStyle=ink; c.globalAlpha=.06; c.lineWidth=1; for(k=0;k<W5;k+=36){ c.beginPath(); c.moveTo(k,0); c.lineTo(k,FL); c.stroke(); } c.globalAlpha=1;
+      c.lineWidth=2; c.globalAlpha=.8; c.beginPath(); c.moveTo(0,FL); c.lineTo(W5,FL); c.stroke(); c.globalAlpha=1;
+      c.globalAlpha=.12; c.lineWidth=1; for(k=-9;k<=9;k++){ c.beginPath(); c.moveTo(480+k*70,FL); c.lineTo(480+k*190,H5); c.stroke(); } [FL+16,FL+38,FL+68].forEach(function(yy){ c.beginPath(); c.moveTo(0,yy); c.lineTo(W5,yy); c.stroke(); }); c.globalAlpha=1;
+      [292,592].forEach(function(lx,li){ c.strokeStyle=ink; c.lineWidth=2; c.beginPath(); c.moveTo(lx,150); c.lineTo(lx,168); c.stroke(); c.beginPath(); c.arc(lx,176,8,0,7); c.stroke(); c.globalAlpha=.55+.35*Math.sin(t*7+li*2)*Math.sin(t*3.1+li); c.fillStyle=ink; c.beginPath(); c.arc(lx,176,4,0,7); c.fill(); for(k=0;k<8;k++){ var a=k*Math.PI/4+t*.5; c.beginPath(); c.moveTo(lx+Math.cos(a)*13,176+Math.sin(a)*13); c.lineTo(lx+Math.cos(a)*19,176+Math.sin(a)*19); c.stroke(); } c.globalAlpha=1; });
+      c.fillStyle=soft; c.font='600 11px "JetBrains Mono",monospace'; c.textAlign='left'; c.textBaseline='alphabetic'; c.fillText('DLC 1  ·  ROOM 5  ·  몬티홀의 딜레마',22,32);
+      for(k=0;k<3;k++) drawDoor(k,ink,bg,t);
+      var order=[['h',S5.hx>=S5.ex?0:1],['e',0]]; // 그림자 순서: 아래쪽(앞) 인물을 나중에
+      drawEps(ink,bg,t); drawHost(ink,bg,t);
+      S5.conf.forEach(function(p){ c.save(); c.translate(p.x,p.y); c.rotate(p.r); c.globalAlpha=Math.min(1,p.life); c.fillStyle=ink; c.font='bold 18px "Times New Roman",serif'; c.textAlign='center'; c.textBaseline='middle'; c.fillText(p.ch,0,0); c.restore(); });
+      var sy=S5.say; if(sy.e) bubble(S5.ex,EY-30,sy.e.text,ink,bg); if(sy.h) bubble(S5.hx,HY-52,sy.h.text,ink,bg);
+      for(k=0;k<3;k++) if(sy['g'+k]) bubble(DC[k],FL-DH-52,sy['g'+k].text,ink,bg);
+      c.restore();
+    }
+    function tick5(ts){
+      if(!active()||room!==5){ mAnim=0; return; }
+      var dt=Math.min(.05,(ts-last5)/1000||0); last5=ts; update5(dt); draw5(); mAnim=requestAnimationFrame(tick5);
+    }
+    function pos(e){ var r=cv5.getBoundingClientRect(); return {x:(e.clientX-r.left)/r.width*W5,y:(e.clientY-r.top)/r.height*H5}; }
+    function doorAt(p){ for(var i=0;i<3;i++) if(p.x>=DX[i]-14&&p.x<=DX[i]+DW+14&&p.y>=FL-DH-44&&p.y<=FL+10) return i; return -1; }
+    cv5.addEventListener('pointermove',function(e){ var d=(S5&&S5.ph==='pick')?doorAt(pos(e)):-1; S5.hover=d; cv5.style.cursor=d>=0?'pointer':'default'; });
+    cv5.addEventListener('pointerleave',function(){ if(S5) S5.hover=-1; });
+    cv5.addEventListener('pointerdown',function(e){ if(S5.ph!=='pick') return; var d=doorAt(pos(e)); if(d>=0) choose(d); });
+    $('mGo').onclick=function(){ $('mStory').open=false; if(S5.ph==='story') enter(); };
+    init(); stats(); msg('<span style="opacity:.7">스토리를 읽고 「복도로 들어간다」를 눌러 주세요.</span>');
+    last5=performance.now(); mAnim=requestAnimationFrame(tick5);
   }
   window.__pz={S:function(){ return S; },upd:function(dt){ update(dt); },keys:keys,open:open,submit:submit};
 
@@ -4305,7 +4632,8 @@ var JOY={active:false,x:0,y:0};
   gt.innerHTML='<div class="gocard" style="width:min(320px,88vw);background:var(--bg)"><div style="font-weight:700;margin-bottom:12px">키 번호를 입력하세요</div><input id="pzKey" class="authinput" type="text" data-nokp="1" autocomplete="off" autocapitalize="off" placeholder="KEY"><div class="mono" id="pzKeyMsg" style="min-height:1.4em;font-size:12px;color:#d32f2f;margin-bottom:8px"></div><button class="btn ghost" id="pzKeyHd" style="margin-bottom:8px">📖 하우스도르프 차원 공부</button><div style="display:flex;gap:8px"><button class="btn" id="pzKeyOk" style="flex:1">확인</button><button class="btn ghost" id="pzKeyNo" style="flex:1">취소</button></div></div>';
   document.body.appendChild(gt);
   ['keydown','keyup'].forEach(function(t){ gt.addEventListener(t,function(e){ e.stopPropagation(); }); });
-  function gate(){ document.getElementById('pzKey').value=''; document.getElementById('pzKeyMsg').textContent=''; gt.style.display='flex'; setTimeout(function(){ document.getElementById('pzKey').focus(); },50); }
+  function gate(){ dlcLoad(function(){ if(DLC_UNLOCK){ open(); return; } gate2(); }); }
+  function gate2(){ document.getElementById('pzKey').value=''; document.getElementById('pzKeyMsg').textContent=''; gt.style.display='flex'; setTimeout(function(){ document.getElementById('pzKey').focus(); },50); }
   function gateOk(){ if(document.getElementById('pzKey').value.trim()===DLC_KEY){ gt.style.display='none'; open(); } else document.getElementById('pzKeyMsg').textContent='키 번호가 올바르지 않습니다.'; }
   document.getElementById('pzKeyOk').addEventListener('click',gateOk);
   document.getElementById('pzKeyNo').addEventListener('click',function(){ gt.style.display='none'; });
@@ -4360,7 +4688,7 @@ var JOY={active:false,x:0,y:0};
       if(un){
         var got=!!(meta.dlc&&meta.dlc.eps1&&meta.dlc.eps1.hidden);
         card.style.cursor='pointer';
-        card.innerHTML='<div><div class="mono" style="font-size:11px;opacity:.7">DLC 1 · PUZZLE</div><div style="font-size:17px;font-weight:700;margin:4px 0">이상한 나라의 엡실론</div><div style="font-size:12px;opacity:.75">몸으로 밀어 돌려서 수식을 만족시키세요.</div>'+(got?'<div class="mono" style="font-size:11px;margin-top:6px">✦ 히든 가호 획득</div>':'')+'</div>';
+        card.innerHTML='<div><div class="mono" style="font-size:11px;opacity:.7">DLC 1 · PUZZLE</div><div style="font-size:17px;font-weight:700;margin:4px 0">이상한 나라의 엡실론</div><div style="font-size:12px;opacity:.75">몸으로 밀어 돌려서 수식을 만족시키세요.</div>'+(got?'<div class="mono" style="font-size:11px;margin-top:6px">✦ 히든 가호 획득</div>':'')+((meta.dlc&&meta.dlc.eps1&&meta.dlc.eps1.cleared)?'<div class="mono" style="font-size:11px;margin-top:6px">🚪 몬티홀의 가호 획득</div>':'')+'</div>';
         card.onclick=gate;
       } else {
         card.innerHTML='<div><div class="mono" style="font-size:11px;opacity:.7">DLC 1 · PUZZLE</div><div style="font-size:17px;font-weight:700;margin:4px 0">🔒 이상한 나라의 엡실론</div><div style="font-size:12px;opacity:.75">STAGE 10을 클리어하면 입장할 수 있어요. 그 전에 위의 공부 버튼으로 미리 예습해 두세요!</div></div>';
@@ -4462,10 +4790,10 @@ if(sb){
     if(b==='endless'? pts<=0 : !cleared) return;
     if(isAdmin()){ setRankMsg('관리자 계정 — 랭킹 미등록'); return; }
     setRankMsg('랭킹 등록 중…');
-    var lo=(g.loadout||[]).filter(Boolean).map(function(s){ return {id:s.id,lv:s.lv}; });
+    var lo=(g.loadout||[]).filter(Boolean).map(function(s){ return {id:s.id,lv:s.lv}; }), lo0=lo.slice(), bl=g.blessing; if(bl) lo.push({id:'bless:'+bl,lv:1});
     Promise.resolve(g.rankRun).then(function(runId){
       if(!runId) throw new Error(g.rankErr||'랭킹 세션 없음 (로그인 필요)');
-      return sb.rpc('finish_run',{p_run:runId,p_cleared:!!cleared,p_points:pts,p_loadout:lo});
+      return sb.rpc('finish_run',{p_run:runId,p_cleared:!!cleared,p_points:pts,p_loadout:lo}).then(function(r){ if(bl&&(r.error||!r.data||!r.data.ok)) return sb.rpc('finish_run',{p_run:runId,p_cleared:!!cleared,p_points:pts,p_loadout:lo0}); return r; });
     }).then(function(r){
       if(r.error) throw new Error(r.error.message);
       var j=r.data; if(!j.ok) throw new Error(j.error);
@@ -4491,8 +4819,8 @@ function renderRank(){
     r.data.forEach(function(x){
       var row=document.createElement('div'); row.className='rankrow'+(x.name.toLowerCase()===me?' me':'');
       var a=document.createElement('span'); a.textContent=x.rank;
-      var n=document.createElement('span'); n.textContent=x.name;
-      var lo=(x.loadout||[]).map(function(s){ var k=skillById(s.id); return (k?k.name:s.id)+' Lv'+s.lv; }).join(' · ');
+      var n=document.createElement('span'); var blE=(x.loadout||[]).filter(function(s){ return s&&String(s.id).indexOf('bless:')===0; })[0], blD=blE&&BLESSINGS[String(blE.id).slice(6)]; n.textContent=(blD?'['+blD.name+'] ':'')+x.name;
+      var lo=(x.loadout||[]).filter(function(s){ return !(s&&String(s.id).indexOf('bless:')===0); }).map(function(s){ var k=skillById(s.id); return (k?k.name:s.id)+' Lv'+s.lv; }).join(' · ');
       if(lo){ var d=document.createElement('div'); d.style.cssText='font-size:11px;opacity:.65;font-weight:400'; d.textContent=lo; n.appendChild(d); }
       var v=document.createElement('span'); v.textContent=rankFmt(tab,x.value);
       row.appendChild(a); row.appendChild(n); row.appendChild(v); box.appendChild(row);
@@ -4504,6 +4832,112 @@ document.getElementById('gotoRank').addEventListener('click',function(){ showScr
 document.getElementById('rankBack').addEventListener('click',function(){ showScreen('menu'); });
 var _ssRank=showScreen;
 showScreen=function(n){ _ssRank.apply(this,arguments); if(n==='rank') renderRank(); };
+
+(function(){
+  var _erHint=endRun;
+  endRun=function(win){
+    var g=G; _erHint.apply(this,arguments);
+    var el=document.getElementById('goHint');
+    if(!el){ el=document.createElement('div'); el.id='goHint'; el.className='mono'; el.style.cssText='margin:0 0 12px;padding:10px 14px;border:1.5px solid currentColor;font-size:13px;line-height:1.7;text-align:left;display:none'; var an=document.getElementById('goRankMsg'); an.parentNode.insertBefore(el,an); }
+    if(!win && g && g.mode==='story' && g.stage && g.stage.id===6 && g.phase==='boss'){
+      el.innerHTML='💡 <b>힌트</b><br>• <b>대쉬</b>로 레이저를 피할 수 있어요.<br>• <b>i</b>를 모아야 보스에게 데미지를 넣을 수 있어요. (i 2개 = 보스 HP −1)';
+      el.style.display='block';
+    } else el.style.display='none';
+  };
+})();
+
+/* 하드 난이도: S급 미만 각성 스킬은 몬스터를 한 방에 잡지 못한다 (1타 최대 체력의 50%) */
+var _dmgAwCap=damageEnemy;
+damageEnemy=function(e,dmg){
+  if(AW_SRC && e && G && G.stage && G.stage.hard){ var cap=(e.maxHp||e.hp)*AW_HARDCAP; if(dmg>cap) dmg=cap; }
+  _dmgAwCap(e,dmg);
+};
+
+
+/* ===================== 가호 (BLESSINGS) — 한 게임에 최대 1개, 앞으로 계속 추가 ===================== */
+var BLESSINGS={
+  monty:{ name:'몬티홀의 가호', icon:'🚪',
+    desc:'게임 시작 시 33% 확률로, 공격을 3번까지 막아주는 몬티홀 방어막이 생성됩니다.',
+    lock:'DLC 1「이상한 나라의 엡실론」을 클리어하면 얻을 수 있어요.',
+    unlocked:function(){ return isAdmin()||!!(meta&&meta.dlc&&meta.dlc.eps1&&meta.dlc.eps1.cleared); } }
+};
+(function(){ var _nmB=normalizeMeta; normalizeMeta=function(m){ var d=_nmB(m); d.blessing=(m&&typeof m.blessing==='string')?m.blessing:null; if(m&&m.dlc&&typeof m.dlc==='object') d.dlc=m.dlc; return d; };
+  try{ var raw=JSON.parse(localStorage.getItem(storageKeyFor(currentUsername()))||'null'); if(raw&&typeof raw.blessing==='string') meta.blessing=raw.blessing; if(raw&&raw.dlc&&!meta.dlc) meta.dlc=raw.dlc; }catch(e){}
+})();
+function activeBlessing(){ var id=meta&&meta.blessing; return (id&&BLESSINGS[id]&&anyDlcCleared()&&BLESSINGS[id].unlocked())?id:null; }
+
+/* 궤도를 도는 작은 문 N개 (인게임 방어막 · DLC 연출 공용) */
+function montyDoorsFX(cx,x,y,t,n,R,ink,bg){
+  cx.save(); cx.translate(x,y);
+  for(var i=0;i<n;i++){
+    var a=t*1.4+i*2*Math.PI/3, dx=Math.cos(a)*R, dy=Math.sin(a)*R*.9, sw=Math.sin(t*2.4+i)*.5+.5;
+    cx.save(); cx.translate(dx,dy); cx.fillStyle=bg; cx.strokeStyle=ink; cx.lineWidth=1.6; cx.fillRect(-5,-8,10,16); cx.strokeRect(-5,-8,10,16);
+    cx.beginPath(); cx.moveTo(-5,-8); cx.lineTo(-5+10*(1-.55*sw),-8-1.5*sw); cx.lineTo(-5+10*(1-.55*sw),8+1.5*sw); cx.lineTo(-5,8); cx.stroke();
+    cx.fillStyle=ink; cx.beginPath(); cx.arc(2.4,1,1.1,0,7); cx.fill(); cx.restore();
+  }
+  cx.restore();
+}
+function montyShieldFX(cx,x,y,t,ink){
+  var m=G.monty, now=performance.now(); if(!m.born) m.born=now;
+  var pop=Math.min(1,(now-m.born)/600), age=m.lastBlocked?Math.min(1,(now-m.lastBlocked)/700):1, R=31+(1-pop)*46, bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#fff';
+  cx.save(); cx.translate(x,y); cx.strokeStyle=ink;
+  if(m.n>0){ cx.globalAlpha=(.2+.12*Math.sin(t*3))*pop; cx.lineWidth=1.6; cx.beginPath(); cx.arc(0,0,R,0,7); cx.stroke(); }
+  if(age<1){ cx.globalAlpha=(1-age)*.9; cx.lineWidth=2.4; cx.beginPath(); cx.arc(0,0,R+age*38,0,7); cx.stroke();
+    var a=t*1.4+m.n*2*Math.PI/3; cx.save(); cx.translate(Math.cos(a)*(R+age*34),Math.sin(a)*(R+age*34)*.9); cx.rotate(age*3); cx.globalAlpha=1-age; cx.fillStyle=bg; cx.fillRect(-5,-8,10,16); cx.strokeRect(-5,-8,10,16); cx.restore(); }
+  cx.globalAlpha=pop; montyDoorsFX(cx,0,0,t,m.n,R,ink,bg);
+  cx.restore();
+}
+function montyRoll(g){
+  var p=g.player, r=new Uint32Array(1); if(window.crypto&&crypto.getRandomValues) crypto.getRandomValues(r); else r[0]=Math.floor(Math.random()*4294967296);
+  var note=function(txt){ g.floats.push({x:p.x,y:p.y-64,text:txt,life:2600,maxLife:2600}); };
+  if((r[0]/4294967296)>=1/3){ note('🚪 몬티홀의 가호 — 이번엔 문이 열리지 않았다'); return; }
+  g.monty={n:3,max:3,lastBlocked:0,born:0};
+  var hp=p.hp;
+  Object.defineProperty(p,'hp',{configurable:true,enumerable:true,get:function(){ return hp; },set:function(v){
+    var m=g.monty;
+    if(m && m.n>0 && g.player===p && v<hp-1.5){ m.n--; m.lastBlocked=performance.now(); g.floats.push({x:p.x,y:p.y-52,text:'🚪 몬티홀 방어막! 남은 '+m.n+'/'+m.max,life:1400,maxLife:1400}); return; }
+    hp=v; }});
+  note('✦ 몬티홀의 가호 발동 — 방어막 3');
+}
+var _srBless=startRun;
+startRun=function(m,i){
+  _srBless.apply(this,arguments);
+  var g=G; if(!g||!g.player) return; var b=activeBlessing(); g.blessing=b; g.monty=null;
+  if(b==='monty') montyRoll(g);
+};
+
+/* 출전 화면: 가호 선택 (한 게임에 최대 1개) */
+function anyDlcCleared(){ if(isAdmin()) return true; var d=meta&&meta.dlc; return !!d&&Object.keys(d).some(function(k){ return d[k]&&d[k].cleared; }); }
+var _rlBless=renderLoadout;
+renderLoadout=function(){
+  _rlBless();
+  var pg=document.getElementById('pickGrid'); if(!pg) return;
+  var box=document.getElementById('blessBox');
+  if(!box){ box=document.createElement('div'); box.id='blessBox'; box.style.cssText='margin-top:14px;border:1px solid var(--line);padding:10px 12px'; pg.insertAdjacentElement('afterend',box); }
+  var sel=activeBlessing(); box.innerHTML='';
+  var h=document.createElement('div'); h.className='mono'; h.style.cssText='font-size:11px;opacity:.7;margin-bottom:8px'; h.textContent='✦ 가호 · 한 게임에 최대 1개'; box.appendChild(h);
+  if(!anyDlcCleared()){ var lk=document.createElement('div'); lk.className='mono'; lk.style.cssText='font-size:12px;opacity:.6'; lk.textContent='🔒 DLC 클리어를 통해 획득'; box.style.opacity='.55'; box.appendChild(lk); return; }
+  box.style.opacity='';
+  var row=document.createElement('div'); row.style.cssText='display:flex;flex-wrap:wrap;gap:8px'; box.appendChild(row);
+  Object.keys(BLESSINGS).forEach(function(id){
+    var B=BLESSINGS[id], ok=B.unlocked(), on=(sel===id);
+    var chip=document.createElement('div'); chip.className='pickchip'+(on?' used':''); chip.style.cssText='cursor:'+(ok?'pointer':'not-allowed')+';'+(ok?'':'opacity:.45;')+(on?'outline:2px solid var(--ink);':'');
+    chip.innerHTML='<div class="pc-t">'+(ok?(on?'선택됨':'가호'):'🔒 잠김')+'</div>'+B.icon+' '+B.name;
+    chip.onclick=function(){ if(!ok) return; meta.blessing=on?null:id; saveMeta(); renderLoadout(); };
+    row.appendChild(chip);
+  });
+  var d=document.createElement('div'); d.style.cssText='font-size:12px;opacity:.8;margin-top:8px;line-height:1.5';
+  d.textContent=sel?BLESSINGS[sel].desc:'선택한 가호가 없습니다. (랭킹 등록 시 닉네임 앞에 [가호 이름]이 표시돼요)'; box.appendChild(d);
+};
+
+/* ---- 효과음 연결 ---- */
+document.addEventListener('click',function(e){ var t=e.target; if(t&&t.closest&&t.closest('button,.stagecard,.pickchip')) SFX.play('click'); },true);
+var _sfS=fireSkill; fireSkill=function(sk,lv){ SFX.play('skill'); return _sfS(sk,lv); };
+var _sfF=spawnFloat; spawnFloat=function(x,y,t){ if(typeof t==='string'&&/오답|시간초과|발산|증명 실패/.test(t)) SFX.play('bad'); return _sfF(x,y,t); };
+var _sfE=endRun; endRun=function(win){ if(G&&G.running) SFX.play(win?'win':'lose'); return _sfE(win); };
+var _sfU=update; update=function(dt){ var hp=(G&&G.player)?G.player.hp:0; _sfU(dt); if(G&&G.player&&G.player.hp<hp-0.5) SFX.play('hit'); };
+window.__sfx=SFX;
+(function(){ var c=document.getElementById('setSfx'); if(!c) return; c.checked=SFX.isOn(); c.addEventListener('change',function(){ SFX.set(c.checked); }); })();
 
 showScreen('lobby');
 
