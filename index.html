@@ -646,7 +646,9 @@ function expHypGen(lv){
 }
 
 function chainGen(lv){
-  var a=2+rnd(3+Math.min(lv,5)), b=randInt(-5,5), n=2+rnd(2), p=randInt(-2,3);
+  var n=(Math.random()<0.7)?2:3, a, b, p;
+  if(n===2){ a=2+rnd(3+Math.min(lv,2)); b=randInt(-4,4); p=randInt(-2,2); }
+  else { a=2+rnd(3); b=randInt(-3,3); p=randInt(-1,2); }
   var inner=a*p+b, ans=n*a*Math.pow(inner,n-1);
   return {q:'f(x)=('+a+'x '+fmtSigned(b)+')'+sup(n)+'\nf\'('+p+') = ?', a:ans};
 }
@@ -719,9 +721,9 @@ var SKILL_POOL=[
  {id:'series',tier:'B',name:'수열의 합',desc:'넓은 범위에 강한 파동.',study:'1부터 n까지의 합은 n(n+1)/2 입니다.',kind:'nova',radius:180,baseDmg:26,cd:6400,win:5200,pause:false,gen:seriesGen},
  {id:'deriv',tier:'A',name:'미분',desc:'가장 가까운 적에게 즉발 폭딜.',study:'미분은 함수의 순간 변화율입니다.',kind:'burst',baseDmg:50,cd:7200,win:4700,pause:true,gen:derivGen},
  {id:'integral',tier:'A',name:'적분',desc:'넓은 범위에 누적된 큰 피해.',study:'적분은 미분의 역연산이며 누적량을 구합니다.',kind:'nova',radius:190,baseDmg:40,cd:8200,win:4900,pause:true,gen:integralGen},
- {id:'ode',tier:'S',name:'미분방정식',desc:'유도 미사일 다수를 소환한다.',study:'미분방정식은 함수와 도함수 사이의 관계식입니다.',kind:'homing',count:6,baseDmg:18,cd:15000,win:8200,pause:true,gen:odeGen},
- {id:'chain',tier:'S',name:'연쇄법칙',desc:'함수의 구조를 분해해 연속 폭발을 일으킨다.',study:'합성함수의 미분에서 바깥함수의 미분과 안쪽함수의 미분을 곱합니다.',kind:'chain',baseDmg:58,cd:15500,win:7800,pause:true,gen:chainGen},
- {id:'matrix',tier:'S',name:'행렬식',desc:'전장을 격자로 절단하는 십자형 파동.',study:'2×2 행렬식은 ad−bc로 계산하며 선형변환의 넓이 배율과 관련됩니다.',kind:'matrix',baseDmg:62,cd:16200,win:5600,pause:true,gen:matrixGen},
+ {id:'ode',tier:'S',name:'미분방정식',desc:'유도 미사일 다수를 소환한다.',study:'미분방정식은 함수와 도함수 사이의 관계식입니다.',kind:'homing',count:7,baseDmg:23,cd:13500,win:8200,pause:true,gen:odeGen},
+ {id:'chain',tier:'S',name:'연쇄법칙',desc:'함수의 구조를 분해해 연속 폭발을 일으킨다.',study:'합성함수의 미분에서 바깥함수의 미분과 안쪽함수의 미분을 곱합니다.',kind:'chain',baseDmg:72,cd:14000,win:7800,pause:true,gen:chainGen},
+ {id:'matrix',tier:'S',name:'행렬식',desc:'전장을 격자로 절단하는 십자형 파동.',study:'2×2 행렬식은 ad−bc로 계산하며 선형변환의 넓이 배율과 관련됩니다.',kind:'matrix',baseDmg:78,cd:14600,win:5600,pause:true,gen:matrixGen},
  {id:'trigderiv',tier:'SS',name:'삼각함수의 미분',desc:'삼각함수의 주기를 찢는 초고위력 일격.',study:'sin(x)의 미분은 cos(x), cos(x)의 미분은 −sin(x)입니다.',kind:'burst',baseDmg:78,cd:17500,win:8000,pause:true,gen:trigDerivGen},
  {id:'exphyp',tier:'SS',name:'지수·쌍곡선함수',desc:'공간을 추적하는 유도 미사일 8기.',study:'eˣ은 미분해도 자기 자신이며 cosh, sinh는 eˣ과 e⁻ˣ의 조합입니다.',kind:'homing',count:8,baseDmg:22,cd:18000,win:8600,pause:true,gen:expHypGen},
  {id:'limit',tier:'SS',name:'극한과 로피탈',desc:'한계점을 관통하는 초압축 빔.',study:'극한은 입력이 특정 값에 가까워질 때 함수값이 접근하는 값을 다룹니다.',kind:'limit',baseDmg:92,cd:19000,win:9000,pause:true,gen:limitGen},
@@ -729,7 +731,7 @@ var SKILL_POOL=[
  {id:'eigen',tier:'SSS',name:'고유값',desc:'고유공간을 소환해 적을 압축한다.',study:'Av=λv에서 방향이 보존되는 벡터의 배율 λ가 고유값입니다.',kind:'eigen',baseDmg:115,cd:22000,win:9800,pause:true,gen:eigenGen},
  {id:'optimize',tier:'SSS',name:'다변수 최적화',desc:'최솟값을 향해 전장을 붕괴시키는 특이점.',study:'여러 변수의 편미분을 동시에 0으로 두어 임계점을 찾고 최적값을 분석합니다.',kind:'optimize',baseDmg:125,cd:23500,win:10000,pause:true,gen:optimizeGen},
  {id:'taylor',tier:'SSS',name:'테일러 전개',desc:'함수를 무한급수처럼 분해하는 연쇄 초신성.',study:'함수를 한 점 근처에서 도함수 정보로 다항식에 근사합니다.',kind:'taylor',baseDmg:145,cd:25000,win:10500,pause:true,gen:taylorGen},
- {id:'eulerphi',tier:'SSS',name:'오일러 파이 함수',desc:'보스 오일러 파이의 힘을 약화된 형태로 빌려온 즉발 폭격.',study:'φ(n)은 1부터 n까지 정수 중 n과 서로소인 것의 개수입니다. 암호학(RSA)의 핵심 개념입니다.\n일반화 공식: n = p₁^a₁·p₂^a₂·…·pₖ^aₖ 일 때 φ(n) = n·(1−1/p₁)(1−1/p₂)…(1−1/pₖ). 서로소인 a,b에 대해 φ(ab)=φ(a)φ(b), 소수의 거듭제곱은 φ(p^k)=p^k−p^(k−1).',kind:'burst',baseDmg:135,cd:21000,win:9500,pause:true,secret:true,gen:eulerPhiGen}
+ {id:'eulerphi',tier:'SSS',name:'오일러 파이 함수',desc:'보스 오일러 파이의 힘을 약화된 형태로 빌려온 즉발 폭격.',study:'φ(n)은 1부터 n까지 정수 중 n과 서로소인 것의 개수입니다. 암호학(RSA)의 핵심 개념입니다.\n일반화 공식: n = p₁^a₁·p₂^a₂·…·pₖ^aₖ 일 때 φ(n) = n·(1−1/p₁)(1−1/p₂)…(1−1/pₖ). 서로소인 a,b에 대해 φ(ab)=φ(a)φ(b), 소수의 거듭제곱은 φ(p^k)=p^k−p^(k−1).',kind:'burst',baseDmg:135,cd:21000,win:14250,pause:true,secret:true,gen:eulerPhiGen}
 ];
 var TIER_ORDER=['E','D','C','B','A','S','SS','SSS','L'];
 var TIER_WEIGHT={E:34,D:24,C:18,B:13,A:8,S:3,SS:1,SSS:0.35,L:0};
@@ -1465,7 +1467,7 @@ function update(dt){
   p.x=clamp(p.x,p.r,WORLD_W-p.r); p.y=clamp(p.y,p.r,WORLD_H-p.r);
 
   if(!G.freeze && keys[' '] && p.dashCd<=0 && p.dashTime<=0){
-    var dd = p.moving? p.faceDir : {x:0,y:1};
+    var dd = p.moving? p.faceDir : ((p.faceDir&&Math.hypot(p.faceDir.x,p.faceDir.y)>0.01)? p.faceDir : {x:0,y:1});   /* 멈춰 있어도 마지막 이동 방향으로 */
     p.dashDir=dd; p.dashTime=160; p.invuln=220; p.dashCd=1300;
   }
 
@@ -1915,7 +1917,7 @@ function deMoivreGen(){
   return {q:'(cos'+th+'° + i·sin'+th+'°)'+sup(nn)+' = a + bi 일 때, a + 2b 의 값은?', a:a};
 }
 SKILL_POOL.push(
- {id:'demoivre',tier:'SSS',secret:true,name:'드무아브르 정리',desc:'복소평면의 회전 레이저 3~5줄기가 나를 중심으로 회전한다.',study:'(cosθ + i sinθ)ⁿ = cos nθ + i sin nθ. 복소수를 n제곱하면 크기는 n제곱, 각도는 n배가 됩니다.\n일반화 공식(거듭제곱근): z = r(cosθ+i sinθ) 의 n제곱근은 r^(1/n)·(cos((θ+2kπ)/n) + i sin((θ+2kπ)/n)), k=0,1,…,n−1 로 총 n개 존재합니다.',kind:'demoivre',baseDmg:70,cd:23000,win:9800,pause:true,gen:deMoivreGen},
+ {id:'demoivre',tier:'SSS',secret:true,name:'드무아브르 정리',desc:'복소평면의 회전 레이저 3~5줄기가 나를 중심으로 회전한다.',study:'(cosθ + i sinθ)ⁿ = cos nθ + i sin nθ. 복소수를 n제곱하면 크기는 n제곱, 각도는 n배가 됩니다.\n일반화 공식(거듭제곱근): z = r(cosθ+i sinθ) 의 n제곱근은 r^(1/n)·(cos((θ+2kπ)/n) + i sin((θ+2kπ)/n)), k=0,1,…,n−1 로 총 n개 존재합니다.',kind:'demoivre',baseDmg:70,cd:23000,win:14700,pause:true,gen:deMoivreGen},
  {id:'epsdelta',tier:'SS',secret:true,name:'ε-δ 논법',desc:'ε와 δ를 직접 입력한다. 조건을 만족하면 수렴 구역 폭발, 아니면 발산 피해.',study:'lim f(x)=L ⟺ 모든 ε>0에 대해 0<|x−a|<δ 이면 |f(x)−L|<ε 인 δ>0이 존재. f(x)=mx 라면 δ ≤ ε/|m|.',kind:'epsdelta',baseDmg:70,cd:14000,win:9000,pause:true,gen:function(){return {q:'',a:0};}}
 );
 
@@ -2539,9 +2541,9 @@ function tabNewQ(){
   var body=document.getElementById('utBody');
   if(tS.mode==='primes'){ var nums=[],pr=[],co=[],big=[],i;
     for(i=2;i<=97;i++) (isPrime(i)?pr:co).push(i);
-    while(big.length<2){ var bv=(Math.random()<0.5)?randInt(101,999):randInt(1001,9999); if(bv%2===0||bv%5===0) continue; if(big.indexOf(bv)<0) big.push(bv); }   /* 16개 중 2개는 3~4자리 */
+    while(big.length<1){ var bv=(Math.random()<0.5)?randInt(101,999):randInt(1001,9999); if(bv%2===0||bv%5===0) continue; if(big.indexOf(bv)<0) big.push(bv); }   /* 16개 중 2개는 3~4자리 */
     var pc=randInt(4,6); pr.sort(function(){return Math.random()-0.5;}); co.sort(function(){return Math.random()-0.5;});
-    nums=pr.slice(0,pc).concat(co.slice(0,14-pc)).concat(big).sort(function(){return Math.random()-0.5;});
+    nums=pr.slice(0,pc).concat(co.slice(0,15-pc)).concat(big).sort(function(){return Math.random()-0.5;});
     tS.left=pc+big.filter(isPrime).length;
     body.innerHTML='<div style=\"font-size:18px\">소수만 클릭하세요 · <b>오답을 누르면 발동이 취소됩니다!</b></div><div id=\"utG\" style=\"display:grid;grid-template-columns:repeat(4,92px);gap:10px\"></div><div id=\"utSc\" class=\"mono\"></div>';
     var g=document.getElementById('utG');
@@ -2571,14 +2573,14 @@ function tabTick(){
   if(tS.t<=0) tabFinish();
 }
 function tabFinish(){
-  clearInterval(tS.iv); tS.done=true; var ok=tS.score>=tS.goal, n=tS.score, id=tS.id;
-  document.getElementById('utBody').innerHTML='<div style="font-size:30px;font-weight:700">정답 '+n+'개</div><div style="font-size:18px">'+(ok?'✦ MISSION CLEAR — 위력 ×1.5':'미션 미달 — 기본 위력')+'</div>';
+  clearInterval(tS.iv); tS.done=true; var n=tS.score, id=tS.id, ok=(n>=tS.goal2)?2:(n>=tS.goal?1:0);
+  document.getElementById('utBody').innerHTML='<div style="font-size:30px;font-weight:700">정답 '+n+'개</div><div style="font-size:18px">'+(ok===2?'✦✦ MISSION PERFECT — 위력 ×2':ok===1?'✦ MISSION CLEAR — 위력 ×1.5':'미션 미달 — 기본 위력')+'</div>';
   setTimeout(function(){ tab.style.display='none'; tabOpen=false; G.freeze=false; ultFx(id,n,ok); },1500);
 }
 function openTab(id){
   if(!tab) buildTab(); var u=ULTS[id], m=MODE[u.mode];
-  var gl=(u.goal!==undefined?u.goal:m.goal); tS={id:id,mode:u.mode,hard:u.hard,T:m.T,t:m.T*1000,goal:gl,score:0,streak:0,done:false};
-  document.getElementById('utT').textContent='◈ 연산 차원 · '+u.name; document.getElementById('utMis').textContent='MISSION : '+(u.mode==='primes'?m.T+'초 안에 소수 '+gl+'개 찾기':m.T+'초 안에 '+gl+'문제 정답'); document.getElementById('utBar').style.width='100%';
+  var g1=(u.mode==='primes')?10:5, g2=(u.mode==='primes')?17:10, gl=g1; tS={id:id,mode:u.mode,hard:u.hard,T:m.T,t:m.T*1000,goal:g1,goal2:g2,score:0,streak:0,done:false};
+  document.getElementById('utT').textContent='◈ 연산 차원 · '+u.name; document.getElementById('utMis').textContent='MISSION : '+m.T+'초 안에 '+(u.mode==='primes'?'소수 ':'')+g1+(u.mode==='primes'?'개':'문제')+' → ×1.5 · '+g2+(u.mode==='primes'?'개':'문제')+' → ×2'; document.getElementById('utBar').style.width='100%';
   tab.style.display='flex'; tabOpen=true; G.freeze=true; tabNewQ(); tS.iv=setInterval(tabTick,100);
 }
 function ultMax(){ return 1+(meta.ultBonus||0); }
@@ -2589,8 +2591,8 @@ function useUlt(){
   c.ultN=(c.ultN||0)+1; updUltIcon(); openTab(id);
 }
 function ultFx(id,n,ms){
-  var p=G.player, c=cx(), mult=ms?1.5:1, pm=petMultiplier(), i;
-  tierFX({tier:'SSS'},p); spawnFloat(p.x,p.y-60,'◈ '+ULTS[id].name+' (정답 '+n+(ms?' · MISSION':'')+')');
+  var p=G.player, c=cx(), mult=(ms===2)?2:(ms?1.5:1), pm=petMultiplier(), i;
+  tierFX({tier:'SSS'},p); spawnFloat(p.x,p.y-60,'◈ '+ULTS[id].name+' (정답 '+n+(ms===2?' · MISSION ×2':ms?' · MISSION ×1.5':'')+')');
   if(id==='u_sigma'){ var hits=Math.min(24,4+n), dm=70*(1+0.06*n)*mult*pm;
     for(i=0;i<hits;i++)(function(i){ later(i*170,function(){ G.projectiles.push({kind:'novafx',x:p.x,y:p.y,r:0,maxR:300+i*25,life:300,maxLife:300}); G.enemies.forEach(function(e){ if(!e.dead&&dist(p.x,p.y,e.x,e.y)<900) damageEnemy(e,dm); }); }); })(i); }
   if(id==='u_prime'){ var st=Math.min(30,n+3), dm2=260*(1+0.03*n)*mult*pm;
@@ -2652,7 +2654,7 @@ endRun=function(win){
   if(win && G && G.mode==='story' && G.stage){
     var st=G.stage;
     if(st.rewardUlt){ if(!meta.ults[st.rewardUlt]){ meta.ults[st.rewardUlt]=true; if(!meta.ultSel) meta.ultSel=st.rewardUlt; msg+=' ◈ 궁극기 획득: 「'+ULTS[st.rewardUlt].name+'」 (로드아웃 SLOT 5)'; } else { meta.currency+=100; msg+=' ◈ 궁극기 보유 중 — 100P'; } }
-    if(st.bonusP){ if(st.hardNo===13){ var _once=!meta.clearedStages[st.id]; if(_once){ meta.currency+=st.bonusP; msg+=' ★ HARD 13 최초 클리어 보상 +'+st.bonusP+'P (1회성)'; } else msg+=' (1회성 보상은 이미 수령함)'; } else { var _rep14=(st.id===13||st.id===14||st.id===15||st.id===16)&&!!meta.clearedStages[st.id]; var _gp=_rep14?Math.max(1,Math.round(st.bonusP/10)):st.bonusP; meta.currency+=_gp; msg+=' +'+_gp+'P'+(_rep14?' (재클리어 1/10)':''); } }
+    if(st.bonusP){ if(st.hardNo===13){ var _once=!meta.clearedStages[st.id]; if(_once){ meta.currency+=st.bonusP; msg+=' ★ HARD 13 최초 클리어 보상 +'+st.bonusP+'P'; } else { meta.currency+=5000; msg+=' +5000P (HARD 13 재클리어 보상)'; } } else { var _rep14=(st.id===13||st.id===14||st.id===15||st.id===16)&&!!meta.clearedStages[st.id]; var _gp=_rep14?Math.max(1,Math.round(st.bonusP/10)):st.bonusP; meta.currency+=_gp; msg+=' +'+_gp+'P'+(_rep14?' (재클리어 1/10)':''); } }
     if(st.ultBonus){ meta.ultFrom=meta.ultFrom||{}; var uk=(st.id===13||st.id===15)?'pair14':(st.id===14||st.id===16)?'pair15':('s'+st.id); if(!meta.ultFrom[uk]){ meta.ultFrom[uk]=true; meta.ultBonus=(meta.ultBonus||0)+st.ultBonus; msg+=' ◈ 궁극기 사용 횟수 +'+st.ultBonus+' (게임당 '+ultMax()+'회)'; } }
   }
   _er3(win);
@@ -3328,7 +3330,7 @@ function stageById(id){ return STAGES.filter(function(s){return s.id===id;})[0];
 })();
 
 /* ---------- 2) 로비 UI: 하드 탭 제거 → 15스테 클리어 시 스테이지 카드가 빨간색으로, 로드아웃에 「하드 도전」 버튼 ---------- */
-STAGES.push({id:17,name:'사건의 지평선',hard:true,hardNo:13,desc:'★HARD 13 — 보스 「1/0」 2페이즈. 1페이즈는 이동·공격이 약 3.5배 빠르고, 2페이즈는 블랙홀이 훨씬 커지고 중력이 폭주해 가까이 가면 꾹 눌러도 빠져나올 수 없다. 클리어 시 1회성 포인트 보상',killQuota:40,types:['point','segment','polygon'],diffMult:6.0,bossHpMult:12,bossDmgMult:2.2,bossType:'singular',bonusP:4000});
+STAGES.push({id:17,name:'사건의 지평선',hard:true,hardNo:13,desc:'★HARD 13 — 보스 「1/0」 2페이즈. 1페이즈는 이동·공격이 약 3.5배 빠르고, 2페이즈는 블랙홀이 훨씬 커지고 중력이 폭주해 가까이 가면 꾹 눌러도 빠져나올 수 없다. 최초 클리어 시 50,000P, 재클리어 시 5,000P 보상',killQuota:40,types:['point','segment','polygon'],diffMult:6.0,bossHpMult:12,bossDmgMult:2.2,bossType:'singular',bonusP:50000});
 var HARD_PAIR={12:17,15:13,16:14};
 function hardUnlocked(){ return !!(meta.clearedStages && meta.clearedStages[16]); }
 
