@@ -4255,7 +4255,8 @@ var SA={
       safeLater(420,function(){ blast(tx,ty,300,d*1.6); addFX({kind:'supernova',x:tx,y:ty,life:1100,maxLife:1100,r:20,maxR:340}); spawnFloat(tx,ty-90,'×  '+c.a+'  ✦✦ 곱셈 격자 폭풍'); }); });
   }}
 };
-function saDmg(sk,lv){ var low=!!AW_LOWTIER[sk.tier]; return 10*AWD[sk.id]*(low?AW_NERF:1)*(AW_TIERBUF[sk.tier]||1)*dmgMult(lv)*petMultiplier(); }
+var SA_DMG_MULT=3; /* 초각성 피해 배율 */
+function saDmg(sk,lv){ var low=!!AW_LOWTIER[sk.tier]; return SA_DMG_MULT*10*AWD[sk.id]*(low?AW_NERF:1)*(AW_TIERBUF[sk.tier]||1)*dmgMult(lv)*petMultiplier(); }
 
 /* ---------- 12) DLC2: 체력 4만 이하 강화 문제 ---------- */
 function lawHardQ(id){
@@ -4617,7 +4618,7 @@ renderLoadout=function(){
   var sg=document.getElementById('saGrid'); if(!sg){ sg=document.createElement('div'); sg.id='saGrid'; sg.style.marginTop='16px'; ag.insertAdjacentElement('afterend',sg); }
   if(!['add','mul'].some(saOwned)){ sg.style.display='none'; sg.innerHTML=''; return; }
   sg.style.display='';
-  sg.innerHTML='<div class="mono" style="font-size:11px;margin-bottom:8px;color:var(--ink-soft)">✦✦ 초각성 — 각성 피해의 10배 · 훨씬 어려운 문제(시간 정지 · 20초) · 쿨타임 6초</div>';
+  sg.innerHTML='<div class="mono" style="font-size:11px;margin-bottom:8px;color:var(--ink-soft)">✦✦ 초각성 — 각성 피해의 30배 · 훨씬 어려운 문제(시간 정지 · 20초) · 쿨타임 6초</div>';
   var grid=document.createElement('div'); grid.className='pickgrid'; sg.appendChild(grid);
   ['add','mul'].filter(saOwned).forEach(function(id){ var sk=skillById(id), own=saOwned(id), rd=saReady(id), on=saActive(id);
     var chip=document.createElement('div'); chip.className='pickchip tier-LL'+(own?'':' used');
