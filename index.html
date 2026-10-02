@@ -267,8 +267,8 @@ button{font-family:inherit;}
 @keyframes bbIn{0%{opacity:0;transform:scaleY(.2);}12%{opacity:1;transform:none;}80%{opacity:1;}100%{opacity:0;}}
 #bossName{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;margin-right:8px;}
 .bosshud .hplabel{display:flex;justify-content:space-between;gap:8px;}
-#rankTabs{display:flex;gap:6px;margin:14px 0}
-#rankTabs button{flex:1;padding:9px 4px;border:2px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
+#rankTabs{display:flex;flex-wrap:wrap;gap:6px;margin:14px 0}
+#rankTabs button{flex:1 1 30%;padding:9px 4px;border:2px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:13px;cursor:pointer}
 #rankTabs button.on{background:var(--ink);color:var(--bg)}
 .rankrow{display:grid;grid-template-columns:44px 1fr auto;gap:8px;padding:8px 10px;border-bottom:1px solid var(--line);font-size:14px}
 .rankrow.me{font-weight:700;outline:2px solid var(--ink)}
@@ -475,7 +475,7 @@ button{font-family:inherit;}
     <div class="wrap">
       <div class="brand"><h1>🏆 랭킹</h1><p>HARD 클리어 기록은 서버가 측정한 실제 소요 시간 (짧을수록 상위)</p></div>
       <div id="rankTabs">
-        <button data-b="hard13">HARD 13 시간</button><button data-b="hard14">HARD 14 시간</button><button data-b="hard15">HARD 15 시간</button><button data-b="endless">무한 포인트</button><button data-b="progress">진행도</button>
+        <button data-b="hard13">HARD 13 시간</button><button data-b="hard14">HARD 14 시간</button><button data-b="hard15">HARD 15 시간</button><button data-b="endless">무한 포인트</button><button data-b="progress">진행도</button><button data-b="hail">❄ 우박 시간</button>
       </div>
       <div id="rankList" class="mono"></div>
       <button class="btn ghost" id="rankBack" style="margin-top:14px;">메뉴로</button>
@@ -892,8 +892,7 @@ function pullSkills(n,cost){
     if(pool.length===0){ meta.currency+=Math.round(cost/n); continue; }
     var sk = pick(pool), msg;
     if(meta.owned[sk.id]){
-      if(meta.owned[sk.id]>=6){ refund+=40; msg='['+sk.tier+'] '+sk.name+' (최대 Lv → 40P)'; }
-      else { meta.owned[sk.id]++; msg='['+sk.tier+'] '+sk.name+' Lv.'+meta.owned[sk.id]+' ▲'; }
+      refund+=40; msg='['+sk.tier+'] '+sk.name+' 중복 획득 ( +40P ) · 레벨업은 포인트 강화로';
     } else { meta.owned[sk.id]=1; msg='['+sk.tier+'] '+sk.name+' NEW!'; }
     lines.push(msg); best=Math.max(best,TIER_ORDER.indexOf(sk.tier));
   }
@@ -1351,7 +1350,7 @@ function spawnEnemy(elite){
   } else {
     var tsec=G.elapsed/1000;
     types=['point']; if(tsec>15) types.push('segment'); if(tsec>40) types.push('polygon');
-    hpScale=1+tsec*0.015; dmgScale=1+tsec*0.01; spdScale=Math.min(1.6,1+tsec*0.004);
+    hpScale=1+tsec*0.015; dmgScale=1+tsec*0.01; spdScale=Math.min(1.6,1+tsec*0.0025);
   }
   var type = elite? 'polygon' : pick(types);
   var base = type==='point'? {hp:12,dmg:8,spd:150,r:9}
@@ -1641,7 +1640,9 @@ function endRun(win){
   var bonus=0;
   var nextBtn=document.getElementById('goNext');
   if(win){
-    bonus = 150 + (G.mode==='story'? G.stage.id*30 : 0);
+    bonus = G.mode==='story' && G.stage && G.stage.hail
+      ? ((meta.clearedStages && meta.clearedStages[G.stage.id]) ? 14285 : 0)
+      : (G.mode==='story' && meta.clearedStages && meta.clearedStages[G.stage.id] ? 14285 : (150 + (G.mode==='story'? G.stage.id*30 : 0)));
     meta.currency += bonus;
     var extraMsg='';
     if(G.mode==='story'){
@@ -1651,14 +1652,9 @@ function endRun(win){
         if(!meta.owned[G.stage.rewardSkill]){
           meta.owned[G.stage.rewardSkill]=1;
           extraMsg+= (extraMsg?' ':' ')+'보스의 스킬 「'+(rsk?rsk.name:G.stage.rewardSkill)+'」을 약화판으로 획득!';
-        } else if(rsk && rsk.tier==='L'){
-          meta.currency+=2000; extraMsg+=' TIER L 스킬 보유 중 — 2000P (레벨업은 스킬 뽑기 화면에서 포인트로)';
-        } else if(meta.owned[G.stage.rewardSkill]<6){
-          meta.owned[G.stage.rewardSkill]++;
-          extraMsg+= (extraMsg?' ':' ')+'전리품 스킬 「'+(rsk?rsk.name:G.stage.rewardSkill)+'」 레벨업! → Lv.'+meta.owned[G.stage.rewardSkill];
         } else {
-          meta.currency+=80;
-          extraMsg+= (extraMsg?' ':' ')+'전리품 스킬이 이미 최대 레벨 → 80P 환급';
+          meta.currency+=40;
+          extraMsg+= (extraMsg?' ':' ')+'전리품 스킬 중복 보상 +40P · 레벨업은 포인트 강화로 가능합니다.';
         }
       }
     }
@@ -2655,7 +2651,7 @@ endRun=function(win){
   if(win && G && G.mode==='story' && G.stage){
     var st=G.stage;
     if(st.rewardUlt){ if(!meta.ults[st.rewardUlt]){ meta.ults[st.rewardUlt]=true; if(!meta.ultSel) meta.ultSel=st.rewardUlt; msg+=' ◈ 궁극기 획득: 「'+ULTS[st.rewardUlt].name+'」 (로드아웃 SLOT 5)'; } else { meta.currency+=100; msg+=' ◈ 궁극기 보유 중 — 100P'; } }
-    if(st.bonusP){ if(st.hardNo===13){ var _once=!meta.clearedStages[st.id]; if(_once){ meta.currency+=st.bonusP; msg+=' ★ HARD 13 최초 클리어 보상 +'+st.bonusP+'P'; } else { meta.currency+=5000; msg+=' +5000P (HARD 13 재클리어 보상)'; } } else { var _rep14=(st.id===13||st.id===14||st.id===15||st.id===16)&&!!meta.clearedStages[st.id]; var _gp=_rep14?Math.max(1,Math.round(st.bonusP/10)):st.bonusP; meta.currency+=_gp; msg+=' +'+_gp+'P'+(_rep14?' (재클리어 1/10)':''); } }
+    if(st.bonusP && !(meta.clearedStages && meta.clearedStages[st.id])){ meta.currency+=st.bonusP; msg+=' ★ 최초 클리어 추가 보상 +'+st.bonusP+'P'; }
     if(st.ultBonus){ meta.ultFrom=meta.ultFrom||{}; var uk=(st.id===13||st.id===15)?'pair14':(st.id===14||st.id===16)?'pair15':('s'+st.id); if(!meta.ultFrom[uk]){ meta.ultFrom[uk]=true; meta.ultBonus=(meta.ultBonus||0)+st.ultBonus; msg+=' ◈ 궁극기 사용 횟수 +'+st.ultBonus+' (게임당 '+ultMax()+'회)'; } }
   }
   _er3(win);
@@ -2763,16 +2759,22 @@ var ENDLESS_BOSSES = STAGES.filter(function(s){return s.bossType;}).map(function
 var _up4=update;
 update=function(dt){
   if(G && G.running && G.mode==='endless'){
-    if(!G.boss || G.boss.dead){
-      if(G.endlessBossTimer===undefined) G.endlessBossTimer=ENDLESS_CFG.bossFirst;
-      G.endlessBossTimer -= dt*1000;
-      if(G.endlessBossTimer<=0 && ENDLESS_BOSSES.length){
-        var pk=ENDLESS_BOSSES[rnd(ENDLESS_BOSSES.length)];
-        var mn=Math.min(3.5, 1+(G.elapsed/1000)/240);
-        G.stage={id:-1, name:'난입: '+pk.name, types:['point','segment','polygon'], diffMult:1, killQuota:9999, bossType:pk.bossType, bossHpMult:pk.hpMult*mn, bossDmgMult:pk.dmgMult*Math.min(1.8,1+G.elapsed/600000)};
-        spawnBoss();
-        G.endlessBossTimer=ENDLESS_CFG.bossGapMin+rnd(ENDLESS_CFG.bossGapRnd);
+    if(G.endlessBossTimer===undefined) G.endlessBossTimer=ENDLESS_CFG.bossFirst;
+    G.endlessBossTimer -= dt*1000;
+    if(G.endlessBossTimer<=0 && ENDLESS_BOSSES.length){
+      // 보스를 처치하지 않고 시간이 지나도 다음 난입 보스로 교대한다.
+      if(G.boss && !G.boss.dead){
+        var oldBoss=G.boss;
+        oldBoss.dead=true;
+        G.enemies=G.enemies.filter(function(e){return e!==oldBoss;});
+        G.projectiles=G.projectiles.filter(function(p){return p.kind!=='bossbolt';});
+        spawnFloat(oldBoss.x,oldBoss.y-48,'다음 보스 난입!');
       }
+      var pk=ENDLESS_BOSSES[rnd(ENDLESS_BOSSES.length)];
+      var mn=Math.min(3.5, 1+(G.elapsed/1000)/240);
+      G.stage={id:-1, name:'난입: '+pk.name, types:['point','segment','polygon'], diffMult:1, killQuota:9999, bossType:pk.bossType, bossHpMult:pk.hpMult*mn, bossDmgMult:pk.dmgMult*Math.min(1.8,1+G.elapsed/600000)};
+      spawnBoss();
+      G.endlessBossTimer=ENDLESS_CFG.bossGapMin+rnd(ENDLESS_CFG.bossGapRnd);
     }
     if(G.boss && !G.boss.dead){
       document.getElementById('bossHpText').textContent=Math.max(0,Math.round(G.boss.hp))+'/'+Math.round(G.boss.maxHp);
@@ -2895,11 +2897,11 @@ renderGacha=function(){
   _rg5();
   var box=document.getElementById('skillCodex');
   Array.prototype.slice.call(box.children).forEach(function(g){ if(g.classList.contains('tiergroup') && g.children.length<=1) g.remove(); });
-  var owned=SKILL_POOL.filter(function(s){ return s.tier==='L' && meta.owned[s.id]; });
+  var owned=SKILL_POOL.filter(function(s){ return !!meta.owned[s.id]; });
   if(!owned.length) return;
-  var sec=document.createElement('div'); sec.className='tiergroup'; sec.innerHTML='<div class="tlabel">TIER L 강화 (포인트 전용)</div>';
+  var sec=document.createElement('div'); sec.className='tiergroup'; sec.innerHTML='<div class="tlabel">보유 스킬 레벨업 · 포인트 강화 (최대 Lv.6)</div>';
   owned.forEach(function(sk){
-    var lv=meta.owned[sk.id], cost=Math.round(3000*Math.pow(2,lv-1));
+    var lv=meta.owned[sk.id], base=(sk.tier==='LL'?10000:(sk.tier==='L'?3000:250)), cost=Math.round(base*Math.pow(2,lv-1));
     var row=document.createElement('div'); row.className='skillrow';
     row.innerHTML='<div><div class="sname">'+sk.name+' ★ Lv.'+lv+'</div><div class="sdesc">'+(lv>=6?'최대 레벨':'다음 레벨까지 '+cost+'P')+'</div></div>';
     var bt=document.createElement('button'); bt.className='btn'; bt.style.width='auto'; bt.style.padding='8px 12px';
@@ -3705,8 +3707,9 @@ render=function(){ _rdChai(); if(G && G.boss && G.boss.chai && !G.boss.dead){ tr
 /* ===================== EXT-Ω3: 무한 모드 개편 · 시그마 랜덤 수열 ===================== */
 var ENDLESS_CFG={ bossFirst:25000, bossGapMin:22000, bossGapRnd:16000,   // 보스 첫 등장 / 처치 후 다음 등장까지(ms)
   floodStart:180, batchEvery:45, batchMax:12, cap:300, hpRamp:120, dmgRamp:600, minInterval:300 };  // 대량 생성 설정(초)
+var SPAWN_SLOW=1.6;   /* 생성량 증가 속도를 1/1.6 로 완화 — 기존 5분대 생성량이 8분대에 도달 */
 function floodInfo(){
-  var sec=G.elapsed/1000, base=Math.max(420,1900-sec*11);
+  var sec=G.elapsed/1000/SPAWN_SLOW, base=Math.max(420,1900-sec*11);
   if(G.mode!=='endless' || sec<ENDLESS_CFG.floodStart) return {batch:1,interval:base};
   var k=Math.floor((sec-ENDLESS_CFG.floodStart)/ENDLESS_CFG.batchEvery);
   return {batch:Math.min(ENDLESS_CFG.batchMax,1+k), interval:Math.max(ENDLESS_CFG.minInterval,base-(sec-ENDLESS_CFG.floodStart)*0.4)};
@@ -4065,6 +4068,8 @@ var _nmP=normalizeMeta;
 normalizeMeta=function(m){ var d=_nmP(m);
   d.superAwake=(m&&m.superAwake&&typeof m.superAwake==='object')?m.superAwake:{};
   d.saOn=(m&&m.saOn&&typeof m.saOn==='object')?m.saOn:{};
+  d.saEasy=(m&&m.saEasy&&typeof m.saEasy==='object')?m.saEasy:{};
+  d.hailColor=!(m&&m.hailColor===false);
   d.gaho=!!(m&&m.gaho); if(m&&m.dlc&&typeof m.dlc==='object') d.dlc=m.dlc; return d; };
 meta=loadMeta(currentUsername());
 var _auaP=adminUnlockAll;
@@ -4233,9 +4238,9 @@ var SA={
     addFX({kind:'psiLine',x:px,y:py,unit:unit,steps:c.steps,ans:c.a,mx:mx,t0:NOW(),dl:dl,life:900+c.steps.length*dl+1600,maxLife:900+c.steps.length*dl+1600});
     p.invuln=Math.max(p.invuln,c.steps.length*dl+1000);
     c.steps.forEach(function(v,i){ safeLater(260+i*dl,function(){ var from=pos; pos+=v; var X=clamp(px+pos*unit,20,WORLD_W-20), X0=clamp(px+from*unit,20,WORLD_W-20);
-      lineStrike(X0,py,X,py,46,d*0.55,null,7); blast(X,py,180,d*1.0); spawnFloat(X,py-70,sgn(v)); }); });
+      lineStrike(X0,py,X,py,130,d*0.55,null,7); blast(X,py,440,d*1.0); spawnFloat(X,py-70,sgn(v)); }); });
     safeLater(260+c.steps.length*dl+260,function(){ var X=clamp(px+c.a*unit,20,WORLD_W-20);
-      lineStrike(X,py-1000,X,py+1000,80,d*2.0,null,7); blast(X,py,400,d*2.2); addFX({kind:'supernova',x:X,y:py,life:1300,maxLife:1300,r:30,maxR:460});
+      lineStrike(X,py-2000,X,py+2000,220,d*2.0,null,7); blast(X,py,950,d*2.2); addFX({kind:'supernova',x:X,y:py,life:1300,maxLife:1300,r:30,maxR:1000});
       spawnFloat(X,py-110,'= '+c.a+'  ✦✦ 수직선 붕괴'); });
   }},
  mul:{name:'곱셈 격자 폭풍',gen:function(){
@@ -4244,18 +4249,35 @@ var SA={
     if(t===1){ a=randInt(13,97); b=randInt(13,97); e=randInt(3,9); return {q:a+' × '+b+' × '+e+' = ?',a:a*b*e,R:3+(a%4),C:3+(e%4)}; }
     a=randInt(31,99); b=randInt(12,a-7); return {q:a+'² − '+b+'² = ?',a:a*a-b*b,R:3+(a%4),C:3+(b%4)}; },
   fire:function(d,c){
-    var p=G.player, px=p.x, py=p.y, R=c.R, C=c.C, gap=62, k=0, i, j, n=R*C;
+    d*=0.8;   /* 범위가 훨씬 넓은 대신 피해 소폭 감소 */
+    var p=G.player, px=p.x, py=p.y, R=c.R, C=c.C, gap=150, k=0, i, j, n=R*C;
     addFX({kind:'psiLattice',x:px,y:py,R:R,C:C,gap:gap,life:900+n*50+1400,maxLife:900+n*50+1400});
     p.invuln=Math.max(p.invuln,n*50+1200);
     for(i=0;i<R;i++) for(j=0;j<C;j++)(function(i,j,k){ safeLater(200+k*50,function(){
       var lx=px+(j-(C-1)/2)*gap, ly=py+(i-(R-1)/2)*gap, t=nearestEnemy(lx,ly), an=t?Math.atan2(t.y-ly,t.x-lx):k*0.7;
-      G.projectiles.push({kind:'bolt',x:lx,y:ly,vx:Math.cos(an)*780,vy:Math.sin(an)*780,dmg:d*0.25,pierce:4,r:7,life:1500,hitSet:[]}); }); })(i,j,k++);
+      G.projectiles.push({kind:'bolt',x:lx,y:ly,vx:Math.cos(an)*900,vy:Math.sin(an)*900,dmg:d*0.25,pierce:12,r:18,life:2600,hitSet:[]}); }); })(i,j,k++);
     safeLater(260+n*50,function(){ var t=nearestEnemy(G.player.x,G.player.y), tx=t?t.x:px+p.faceDir.x*300, ty=t?t.y:py+p.faceDir.y*300;
-      [Math.PI/4,-Math.PI/4].forEach(function(a,w){ safeLater(w*160,function(){ rayStrike(tx-Math.cos(a)*1300,ty-Math.sin(a)*1300,a,2600,64,d*1.3,null,7); }); });
-      safeLater(420,function(){ blast(tx,ty,300,d*1.6); addFX({kind:'supernova',x:tx,y:ty,life:1100,maxLife:1100,r:20,maxR:340}); spawnFloat(tx,ty-90,'×  '+c.a+'  ✦✦ 곱셈 격자 폭풍'); }); });
+      [Math.PI/4,-Math.PI/4].forEach(function(a,w){ safeLater(w*160,function(){ rayStrike(tx-Math.cos(a)*2200,ty-Math.sin(a)*2200,a,4400,180,d*1.3,null,7); }); });
+      safeLater(420,function(){ blast(tx,ty,780,d*1.6); addFX({kind:'supernova',x:tx,y:ty,life:1100,maxLife:1100,r:20,maxR:820}); spawnFloat(tx,ty-90,'×  '+c.a+'  ✦✦ 곱셈 격자 폭풍'); }); });
   }}
 };
 var SA_DMG_MULT=3; /* 초각성 피해 배율 */
+function saEasy(id){ return !!(meta.saEasy&&meta.saEasy[id]); }
+SA.add.easy=function(){   /* 쉬운 문제: 두 자리 수 이동 */
+  var t=rnd(2), s=[], i, k=4;
+  for(i=0;i<k;i++){ var v=randInt(11,99); s.push((i%2===0)===(Math.random()<0.75)?v:-v); }
+  if(!s.some(function(v){return v<0;})) s[1]=-s[1]; if(!s.some(function(v){return v>0;})) s[0]=-s[0];
+  var a=s.reduce(function(x,y){return x+y;},0);
+  return {q:'수직선 위 0 에서 출발해\n'+s.map(sgn).join(', ')+'\n만큼 차례로 이동한 위치는?',a:a,steps:s};
+};
+SA.mul.easy=function(){   /* 쉬운 문제: 두 자리×한 자리 / 세 자리×한 자리 / 깔끔한 합차 */
+  var t=rnd(3), a, b;
+  if(t===0){ a=randInt(12,99); b=randInt(3,9); return {q:a+' × '+b+' = ?',a:a*b,R:3+(a%4),C:3+(b%4)}; }
+  if(t===1){ a=randInt(101,999); b=randInt(3,9); if(a%100===0) a++; return {q:a+' × '+b+' = ?',a:a*b,R:3+(a%4),C:3+(b%4)}; }
+  var sm=pick([20,30,40,50,100]), df=pick([2,4,6,8,10,12]);
+  a=(sm+df)/2; b=(sm-df)/2;
+  return {q:a+'² − '+b+'² = ?',a:a*a-b*b,R:3+(a%4),C:3+(b%4)};
+};
 function saDmg(sk,lv){ var low=!!AW_LOWTIER[sk.tier]; return SA_DMG_MULT*10*AWD[sk.id]*(low?AW_NERF:1)*(AW_TIERBUF[sk.tier]||1)*dmgMult(lv)*petMultiplier(); }
 
 /* ---------- 12) DLC2: 체력 4만 이하 강화 문제 ---------- */
@@ -4292,10 +4314,10 @@ var _ocP=openChallenge;
 openChallenge=function(i){
   var slot=G.loadout[i];
   if(slot&&SA[slot.id]&&saActive(slot.id)){
-    var c=SA[slot.id].gen(), T=20000;
+    var c=(saEasy(slot.id)?SA[slot.id].easy():SA[slot.id].gen()), T=20000;
     G.challenge={slotIdx:i,sk:slot.sk,lv:slot.lv,q:c.q,a:c.a,buf:'',timeLeft:T,timeMax:T,sa:c};
     G.freeze=true; document.getElementById('freezeBanner').style.display='block';
-    setQ('✦✦ 초각성 · '+slot.sk.name+' 「'+SA[slot.id].name+'」 (Lv.'+slot.lv+')',c.q);
+    setQ('✦✦ 초각성 · '+slot.sk.name+' 「'+SA[slot.id].name+'」 (Lv.'+slot.lv+')'+(saEasy(slot.id)?' · 쉬운 문제':''),c.q);
     document.getElementById('challenge').classList.add('show'); renderPad(); return;
   }
   _ocP(i);
@@ -4541,7 +4563,7 @@ endRun=function(win){
       s.cleared=true; s.clears=(s.clears||0)+1; meta.currency+=50000; msg=' ✦ 클리어 보상 +50,000P · 재입장은 다시 100,000P';
       if(el) el.textContent=el.textContent.replace('모든 스테이지를 클리어했습니다!','「4개의 법칙」 클리어 — 나눗셈 「÷」 이 나누어떨어졌다.');
       s.saPending=true;
-    } else msg=' 🎟 입장권이 소모되었습니다 — 다시 도전하려면 100,000P 또는 키가 필요합니다.';
+    } else { meta.currency+=30000; msg=' 💧 위로금 +30,000P · 🎟 입장권이 소모되었습니다 — 다시 도전하려면 100,000P 또는 키가 필요합니다.'; }
     saveMeta(); if(el) el.textContent+=msg;
     if(win) saShow();
   }
@@ -4660,21 +4682,40 @@ var SA_IDS=['add','mul'];
     if(!lawState().saPending){ showScreen('gameover'); return; }
     busy=true; b.disabled=true;
     meta.superAwake=meta.superAwake||{}; meta.saOn=meta.saOn||{};
-    var results={}; SA_IDS.forEach(function(id){ if(saOwned(id)) results[id]='own'; else if(Math.random()<0.5){ results[id]='win'; meta.superAwake[id]=true; meta.saOn[id]=true; } else results[id]='lose'; });
+    var results={}; SA_IDS.forEach(function(id){ if(saOwned(id)) results[id]='own'; else if(Math.random()<0.5){ results[id]='win'; meta.superAwake[id]=true; meta.saOn[id]=true; } else { results[id]='lose'; meta.currency+=25000; } });
     lawState().saPending=false; saveMeta();
     var i=0;
     (function next(){
       if(i>=SA_IDS.length){ b.textContent='결과 화면으로'; b.disabled=false; busy=false;
-        var w=SA_IDS.filter(function(id){ return results[id]==='win'; }).length; document.getElementById('saMsg').textContent=w?('✦✦ 초각성 '+w+'개 획득! (사용하려면 각성 + Lv.6 필요 · 로드아웃에서 ON/OFF)'):'이번엔 초각성을 얻지 못했습니다.'; return; }
+        var w=SA_IDS.filter(function(id){ return results[id]==='win'; }).length; var f=SA_IDS.filter(function(id){ return results[id]==='lose'; }).length; document.getElementById('saMsg').textContent=(w?('✦✦ 초각성 '+w+'개 획득! (사용하려면 각성 + Lv.6 필요) '):'이번엔 초각성을 얻지 못했습니다. ')+(f?('위로금 +'+(f*25000).toLocaleString()+'P'):''); return; }
       var id=SA_IDS[i++], c=document.getElementById('sac-'+id);
       if(results[id]==='own'){ setTimeout(next,450); return; }
       var n=0, sym=['?','✦','✕','✧','…'], iv=setInterval(function(){ c.querySelector('.sa-s').textContent=sym[n++%sym.length]; },90);
-      setTimeout(function(){ clearInterval(iv); var ok=results[id]==='win'; c.className='sacard '+(ok?'win':'lose'); c.innerHTML=cardHTML(id,ok?'✦✦':'✕',ok?'초각성 획득!':'실패'); SFX.play(ok?'win':'bad'); setTimeout(next,600); },1500);
+      setTimeout(function(){ clearInterval(iv); var ok=results[id]==='win'; c.className='sacard '+(ok?'win':'lose'); c.innerHTML=cardHTML(id,ok?'✦✦':'✕',ok?'초각성 획득!':'실패 · 위로금 +25,000P'); SFX.play(ok?'win':'bad'); setTimeout(next,600); },1500);
     })();
   });
   window.__saShow=function(){ window.__saRender(); showScreen('sagacha'); };
 })();
 function saShow(){ window.__saShow(); }
+var SA_EASY_PRICE=100000;
+var _rgSA=renderGacha;
+renderGacha=function(){
+  _rgSA();
+  var owned=SA_IDS.filter(saOwned), box=document.getElementById('skillCodex'); if(!owned.length||!box) return;
+  var sec=document.createElement('div'); sec.className='tiergroup'; sec.innerHTML='<div class="tlabel">✦✦ 초각성 문제 난이도 (스킬당 '+SA_EASY_PRICE.toLocaleString()+'P)</div>';
+  owned.forEach(function(id){
+    var sk=skillById(id), has=saEasy(id);
+    var row=document.createElement('div'); row.className='skillrow';
+    row.innerHTML='<div><div class="sname">✦✦ '+sk.name+' · '+SA[id].name+'</div><div class="sdesc">'+(id==='add'?'세 자리 수 이동 → 두 자리 수 이동':'큰 수 곱셈 → 두·세 자리×한 자리 또는 깔끔한 합차(a²−b²)')+'</div></div>';
+    var bt=document.createElement('button'); bt.className='btn'; bt.style.width='auto'; bt.style.padding='8px 12px';
+    bt.textContent=has?'구매 완료 ✓':'쉬운 문제 (−'+SA_EASY_PRICE.toLocaleString()+'P)'; bt.disabled=has;
+    bt.onclick=function(){ if(!isAdmin()&&meta.currency<SA_EASY_PRICE){ document.getElementById('gachaResult').textContent='포인트가 부족합니다. (필요 '+SA_EASY_PRICE.toLocaleString()+'P)'; return; }
+      if(!confirm('「'+sk.name+'」 초각성 문제를 쉬운 난이도로 바꿀까요? ('+SA_EASY_PRICE.toLocaleString()+'P)')) return;
+      if(!isAdmin()) meta.currency-=SA_EASY_PRICE; meta.saEasy=meta.saEasy||{}; meta.saEasy[id]=true; saveMeta(); renderGacha(); };
+    row.appendChild(bt); sec.appendChild(row);
+  });
+  box.appendChild(sec);
+};
 })();
 
 })();
@@ -5576,21 +5617,56 @@ if(sb){
   document.addEventListener('click',function(e){
     if(e.target&&e.target.id==='quitBtn'&&G&&G.running&&G.rankBoard==='endless') rankSubmit(G,false);
   },true);
+
+  /* --- 우박 랭킹: 서버가 측정한 클리어 시간 (hail_ranking.sql 필요) --- */
+  var _srHail=startRun;
+  startRun=function(mode,idx){
+    _srHail.apply(this,arguments);
+    var g=G; if(!g||!g.running||isAdmin()) return;
+    if(g.mode==='story'&&g.stage&&g.stage.hail){
+      g.hailRun=ensureAuth().then(function(uid){ if(!uid) return null; return sb.rpc('hail_start').then(function(r){ return r.error?null:r.data; }); }).catch(function(){ return null; });
+    }
+  };
+  var hailSubmit=function(g){
+    setRankMsg('우박 랭킹 등록 중…');
+    var lo=(g.loadout||[]).filter(Boolean).map(function(s){ return {id:s.id,lv:s.lv}; });
+    Promise.resolve(g.hailRun).then(function(runId){
+      if(!runId) throw new Error('랭킹 세션 없음 (로그인 필요 또는 서버 설정 필요)');
+      return sb.rpc('hail_finish',{p_run:runId,p_loadout:lo,p_color:meta.hailColor!==false});
+    }).then(function(r){
+      if(r.error) throw new Error(r.error.message);
+      var j=r.data; if(!j.ok) throw new Error(j.error);
+      HC_CACHE=null;
+      setRankMsg((j.improved?'🏆 우박 신기록! ':'우박 기록 ')+rankFmt('hail',j.value)+' · 현재 '+j.rank+'위 / '+j.total+'명'+(j.improved?'':' (내 최고 '+rankFmt('hail',j.best)+')'));
+    }).catch(function(e){ setRankMsg('우박 랭킹 등록 실패: '+e.message); });
+  };
+  var _erHail=endRun;
+  endRun=function(win){
+    var g=G; _erHail.apply(this,arguments);
+    if(win&&g&&g.stage&&g.stage.hail&&!g.running&&!g._hailSent&&!isAdmin()){ g._hailSent=true; hailSubmit(g); }
+  };
 }
 
+var HC_CACHE=null, HC_T=0;
+function hailColorSet(){
+  if(!sb) return Promise.resolve({});
+  if(HC_CACHE&&Date.now()-HC_T<30000) return Promise.resolve(HC_CACHE);
+  return sb.rpc('hail_colors').then(function(r){ var o={}; if(!r.error&&Array.isArray(r.data)) r.data.forEach(function(n){ o[String(n&&typeof n==='object'?Object.values(n)[0]:n).toLowerCase()]=1; }); HC_CACHE=o; HC_T=Date.now(); return o; },function(){ return {}; });
+}
 function renderRank(){
   var box=document.getElementById('rankList'), tab=rankTab, me=(currentUsername()||'').toLowerCase();
   document.querySelectorAll('#rankTabs button').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-b')===tab); });
   if(!sb||!window.__uid){ box.textContent='랭킹은 로그인(계정 관리)한 뒤 볼 수 있습니다.'; return; }
   box.textContent='불러오는 중…';
-  sb.rpc('get_ranks',{p_board:tab}).then(function(r){
+  Promise.all([(tab==='hail'?sb.rpc('hail_ranks'):sb.rpc('get_ranks',{p_board:tab})),hailColorSet()]).then(function(rr){
+    var r=rr[0], HC=rr[1];
     if(tab!==rankTab) return; if(r.error) throw new Error(r.error.message);
     if(!r.data.length){ box.textContent='아직 기록이 없습니다.'; return; }
     box.textContent='';
     r.data.forEach(function(x){
       var row=document.createElement('div'); row.className='rankrow'+(x.name.toLowerCase()===me?' me':'');
       var a=document.createElement('span'); a.textContent=x.rank;
-      var n=document.createElement('span'); var blE=(x.loadout||[]).filter(function(s){ return s&&String(s.id).indexOf('bless:')===0; })[0], blD=blE&&BLESSINGS[String(blE.id).slice(6)]; n.textContent=(blD?'['+blD.name+'] ':'')+x.name;
+      var n=document.createElement('span'); var blE=(x.loadout||[]).filter(function(s){ return s&&String(s.id).indexOf('bless:')===0; })[0], blD=blE&&BLESSINGS[String(blE.id).slice(6)]; n.textContent=(blD?'['+blD.name+'] ':''); var nmS=document.createElement('span'); nmS.textContent=x.name; if(HC[String(x.name).toLowerCase()]) nmS.className='hailnick'; n.appendChild(nmS);
       var lo=(x.loadout||[]).filter(function(s){ return !(s&&String(s.id).indexOf('bless:')===0); }).map(function(s){ var k=skillById(s.id); return (k?k.name:s.id)+' Lv'+s.lv; }).join(' · ');
       if(lo){ var d=document.createElement('div'); d.style.cssText='font-size:11px;opacity:.65;font-weight:400'; d.textContent=lo; n.appendChild(d); }
       var v=document.createElement('span'); v.textContent=rankFmt(tab,x.value);
@@ -5821,6 +5897,23 @@ window.__sfx=SFX;
      +'<div class="mono" style="font-size:11.5px;margin-top:8px">'+(has?'🎟 입장권 보유 — 눌러서 출전':'🔒 입장 : 🔑 키 번호 또는 💰 100,000P')+(s.cleared?' · ✓ 클리어 '+(s.clears||1)+'회':'')+(sa.add?' · ✦✦ 덧셈뺄셈':'')+(sa.mul?' · ✦✦ 곱셈구구':'')+'</div>';
     c.onclick=openGate; box.appendChild(c);
   };
+})();
+
+/* ---------- 우박 클리어 닉네임 하늘색 (설정으로 ON/OFF) ---------- */
+(function(){
+  var css=document.createElement('style'); css.textContent='.hailnick{color:#29b6f6 !important;font-weight:700}'; document.head.appendChild(css);
+  var scr=document.getElementById('screen-settings'), wrap=scr&&scr.querySelector('.wrap'); if(!wrap) return;
+  var row=document.createElement('label'); row.className='setrow'; row.id='hailColorRow';
+  row.innerHTML='<span>❄ 우박 클리어 닉네임 <b style="color:#29b6f6">하늘색</b><div id="hcSub" class="mono" style="font-size:11px;opacity:.7;margin-top:2px"></div></span><input type="checkbox" id="setHailColor" style="margin-left:auto">';
+  var tr=document.getElementById('themeRow'); if(tr) tr.insertAdjacentElement('afterend',row); else wrap.appendChild(row);
+  var cb=document.getElementById('setHailColor'), sub=document.getElementById('hcSub');
+  function cleared(){ return !!(meta&&meta.clearedStages&&meta.clearedStages[18]); }
+  function paint(){ var c=cleared(); cb.disabled=!c; cb.checked=c&&meta.hailColor!==false; sub.textContent=c?'랭킹 등에서 내 닉네임이 하늘색으로 표시됩니다.':'우박 보스를 클리어하면 사용할 수 있어요.'; row.style.opacity=c?'1':'.55'; }
+  cb.addEventListener('change',function(){ if(!cleared()) return; meta.hailColor=cb.checked; saveMeta(); HC_CACHE=null;
+    if(sb&&window.__uid){ sb.rpc('hail_set_color',{p_on:cb.checked}).then(function(){},function(){}); } selfPaint(); });
+  function selfPaint(){ var on=cleared()&&meta.hailColor!==false; ['menuAccount','lobbyAcc'].forEach(function(id){ var e=document.getElementById(id); if(e) e.classList.toggle('hailnick',on); }); }
+  var _ssHC=showScreen; showScreen=function(n){ _ssHC.apply(this,arguments); if(n==='settings') paint(); selfPaint(); };
+  setInterval(selfPaint,1000); paint(); selfPaint();
 })();
 
 showScreen('lobby');
