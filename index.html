@@ -5693,7 +5693,7 @@ function renderRank(){
     r.data.forEach(function(x){
       var row=document.createElement('div'); row.className='rankrow'+(x.name.toLowerCase()===me?' me':'');
       var a=document.createElement('span'); a.textContent=x.rank;
-      var n=document.createElement('span'); var blE=(x.loadout||[]).filter(function(s){ return s&&String(s.id).indexOf('bless:')===0; })[0], blD=blE&&BLESSINGS[String(blE.id).slice(6)]; n.textContent=(blD?'['+blD.name+'] ':''); var nmS=document.createElement('span'); nmS.textContent=x.name; if(HC[String(x.name).toLowerCase()]) nmS.className='hailnick'; n.appendChild(nmS);
+      var n=document.createElement('span'); var blE=(x.loadout||[]).filter(function(s){ return s&&String(s.id).indexOf('bless:')===0; })[0], blD=blE&&BLESSINGS[String(blE.id).slice(6)]; n.textContent=(blD?'['+blD.name+'] ':''); var nmS=document.createElement('span'); nmS.textContent=x.name; if(HC[String(x.name).toLowerCase()]||(x.name.toLowerCase()===me&&meta&&meta.clearedStages&&meta.clearedStages[18]&&meta.hailColor!==false)) nmS.className='hailnick'; n.appendChild(nmS);
       var lo=(x.loadout||[]).filter(function(s){ return !(s&&String(s.id).indexOf('bless:')===0); }).map(function(s){ var k=skillById(s.id); return (k?k.name:s.id)+' Lv'+s.lv; }).join(' · ');
       if(lo){ var d=document.createElement('div'); d.style.cssText='font-size:11px;opacity:.65;font-weight:400'; d.textContent=lo; n.appendChild(d); }
       var v=document.createElement('span'); v.textContent=rankFmt(tab,x.value);
@@ -5940,7 +5940,10 @@ window.__sfx=SFX;
     if(sb&&window.__uid){ sb.rpc('hail_set_color',{p_on:cb.checked}).then(function(){},function(){}); } selfPaint(); });
   function selfPaint(){ var on=cleared()&&meta.hailColor!==false; ['menuAccount','lobbyAcc'].forEach(function(id){ var e=document.getElementById(id); if(e) e.classList.toggle('hailnick',on); }); }
   var _ssHC=showScreen; showScreen=function(n){ _ssHC.apply(this,arguments); if(n==='settings') paint(); selfPaint(); };
-  setInterval(selfPaint,1000); paint(); selfPaint();
+  var hcSynced=null;   /* 이미 우박을 클리어한 계정도 서버에 색 설정을 1회 동기화 */
+  function hcSync(){ if(!sb||!window.__uid||!cleared()||hcSynced===window.__uid) return; hcSynced=window.__uid;
+    sb.rpc('hail_set_color',{p_on:meta.hailColor!==false}).then(function(){ HC_CACHE=null; },function(){ hcSynced=null; }); }
+  setInterval(function(){ selfPaint(); hcSync(); },1000); paint(); selfPaint();
 })();
 
 /* 히든 보스 생존 중에는 무한 모드 경과 시간과 페이즈 시계를 정지 */
