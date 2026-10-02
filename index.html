@@ -312,7 +312,7 @@ button{font-family:inherit;}
       <div class="lobby-tip mono" id="lobbyTip"></div>
       <div class="lobby-credit mono">제작 및 문의 · <b>@2m.nze</b></div>
     </div>
-    <div class="lobby-foot mono">ECLIPSILON v3.0 · ACCOUNT : <span id="lobbyAcc"></span></div>
+    <div class="lobby-foot mono">ECLIPSILON v3.1 · ACCOUNT : <span id="lobbyAcc"></span></div>
   </div>
 
   <!-- ===================== MENU ===================== -->
@@ -2098,7 +2098,7 @@ endRun=function(win){
 var _fs=fireSkill;
 fireSkill=function(sk,lv){
   if(sk.kind==='demoivre'){ tierFX(sk,G.player); var n=3+(lv>=3?1:0)+(lv>=6?1:0);
-    cx().rays.push({a:0,n:n,life:3400,tick:0,dmg:sk.baseDmg*dmgMult(lv)*petMultiplier()*0.42});
+    cx().rays.push({a:0,n:n,life:6000,tick:0,dmg:sk.baseDmg*dmgMult(lv)*petMultiplier()*0.42});
     spawnFloat(G.player.x,G.player.y-44,'zⁿ → 각도 n배 · 회전 레이저 '+n+'줄기'); return; }
   _fs(sk,lv);
 };
@@ -3540,7 +3540,7 @@ AW.demoivre={gen:function(){
   }
   return {q:'z = 1 + i  일 때, z¹² 을 a + bi 꼴로 나타내면\n2a + 3b 의 값은?',a:-128};
 },
-  fire:function(sk,d,c){ var n=Math.max(3,Math.min(9,3+Math.floor(Math.log10(Math.abs(c.a)+1)*2))); cx().rays.push({a:0,n:n,life:2600,tick:0,dmg:d*0.5});
+  fire:function(sk,d,c){ var n=Math.max(3,Math.min(9,3+Math.floor(Math.log10(Math.abs(c.a)+1)*2))); cx().rays.push({a:0,n:n,life:4800,tick:0,dmg:d*0.5});
     spawnFloat(G.player.x,G.player.y-44,'계산값 '+c.a+' → 회전 레이저 '+n+'줄기'); }};
 
 AW.epsdelta={gen:function(){ return {q:'',a:0}; }, fire:function(){}};
@@ -3998,6 +3998,658 @@ function adminUnlockAll(){
 }
 var _afA=adminFill; adminFill=function(){ _afA(); adminUnlockAll(); };
 adminFill();
+
+
+/* ===================== EXT-Ψ: DLC 2 「4개의 법칙」 · 초각성 · 재난 「우박」(콜라츠) · TIER LL · 각성 보정 ===================== */
+(function(){
+var TAU=Math.PI*2;
+function NOW(){ return performance.now(); }
+function inkC(){ return getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#111'; }
+function camP(){ var p=G.player; return {x:VW>=WORLD_W?WORLD_W/2:clamp(p.x,VW/2,WORLD_W-VW/2), y:VH>=WORLD_H?WORLD_H/2:clamp(p.y,VH/2,WORLD_H-VH/2)}; }
+function SC(x,y,c){ return {x:x-c.x+VW/2,y:y-c.y+VH/2}; }
+function fmtN(n){ return Math.round(n).toLocaleString(); }
+
+/* ---------- 0) TIER LL ---------- */
+TIER_ORDER.push('LL'); TIER_WEIGHT.LL=0;
+var _tfxP=tierFX;
+tierFX=function(sk,p){ if(sk&&sk.tier==='LL'){ _tfxP({tier:'L'},p); _tfxP({tier:'SSS'},p); burstFX(p.x,p.y,5); return; } return _tfxP(sk,p); };
+
+/* ---------- 1) 콜라츠 유틸 ---------- */
+function colNext(n){ return (n%2)?3*n+1:n/2; }
+function colChain(n){ var a=[n]; while(n!==1&&a.length<2000){ n=colNext(n); a.push(n); } return a; }
+function colMax(ch){ return Math.max.apply(null,ch); }
+function collatzQuiz(lvl){
+  lvl=lvl||0; var t=rnd(3), n, k, x, i, ch;
+  if(t===0){ n=randInt(5,40+lvl*20); k=randInt(4,6+lvl*2); x=n; for(i=0;i<k;i++) x=colNext(x);
+    return {q:'콜라츠 추측 (짝수 ÷2 · 홀수 ×3+1)\n'+n+' 에서 시작해 '+k+'번 진행하면?',a:x}; }
+  if(t===1){ for(i=0;i<200;i++){ n=randInt(6,60); ch=colChain(n); if(ch.length-1>=6&&ch.length-1<=14+lvl*5) break; }
+    return {q:'콜라츠 추측 (짝수 ÷2 · 홀수 ×3+1)\n'+n+' 이 처음으로 1 이 될 때까지\n몇 번 진행해야 할까?',a:ch.length-1}; }
+  for(i=0;i<200;i++){ n=randInt(5,50); ch=colChain(n); if(colMax(ch)<=160+lvl*90&&colMax(ch)>n) break; }
+  return {q:'콜라츠 추측 (짝수 ÷2 · 홀수 ×3+1)\n'+n+' 에서 시작한 우박수열에서\n가장 큰 수는?',a:colMax(ch)};
+}
+
+/* ---------- 2) 스토리 ---------- */
+var LAW_STORY={
+ intro:['…덧셈, 뺄셈, 곱셈. 세 개의 법칙이 무너진 자리에 마지막 기호 하나가 남았다.','÷ : 나는 나눗셈. 모든 것을 똑같이 나누는 자. 몫과 나머지로 세상을 쪼개 왔다.','÷ : 너의 무기는 더하고, 빼고, 곱하는 것뿐. 그 셋으로 나를 넘어설 수 있을까?','÷ : 문제를 내겠다. 맞혀도 아무것도 주지 않는다. 틀리면… 그만큼 나눠 가져가겠다.','÷ : 아, 그리고 하나 더. 세상에는 절대로 나눌 수 없는 것이 있지.','(나눗셈 문제: 15초 간격 · 10초 풀이 · 오답/시간초과 −24)'],
+ half:['÷ : …몫이 줄어든다. 그렇다면 너의 연산도 무거워져야 공평하지.','(덧셈뺄셈은 두 자리 수 세 번 이동, 곱셈구구는 세 자리×한 자리 / 두 자리×두 자리로 바뀐다. 대신 풀이 시간이 늘어난다.)'],
+ end:['÷ : …나머지 0. 깔끔하게 나누어떨어졌군.','÷ : 기억해라. 0으로 나누는 순간, 모든 법칙은 정의되지 않는다.','네 개의 법칙이 하나로 묶이며, 덧셈과 곱셈이 처음 보는 빛으로 떨리기 시작한다…']
+};
+var HAIL_STORY={
+ intro:['⚠ 재난 경보 — 하늘에서 숫자가 쏟아진다.','짝수는 반으로 쪼개지고, 홀수는 세 배로 부풀어 다시 떨어진다. 사람들은 그것을 「우박수」라 불렀다.','3n+1 : 나는 아직 아무도 증명하지 못한 추측. 모든 수는 결국 1로 떨어진다고들 하지.','3n+1 : 하지만 그 길이 얼마나 높이 솟구치는지, 너는 계산할 수 있는가?','(경고: 이 재난은 지금의 힘으로는 막을 수 없다. 어딘가의 「진각성」만이 우박을 멈출 수 있다고 한다.)'],
+ p2:['3n+1 : 27 은 111번을 오르내리며 9232 까지 솟는다. 너의 몸도 그렇게 흔들릴 것이다.','(그래프가 세로로도 내려온다. 우박이 두 배로 쏟아진다.)'],
+ p3:['3n+1 : 4 → 2 → 1 → 4 → 2 → 1 … 끝난 줄 알았나? 이것이 영원한 고리다.','(세 줄기 4·2·1 고리가 회전한다. 모든 패턴이 최대 속도로 몰아친다.)'],
+ end:['3n+1 : …1. 모든 수는 결국 1로 떨어진다.','3n+1 : 증명은 아직이다. 하지만 너는 적어도 하나의 반례도 남기지 않았다.','하늘이 맑아진다. 손바닥 위에 아직 녹지 않은 우박 하나가 숫자를 품고 반짝인다.']
+};
+
+/* ---------- 3) 스테이지 ---------- */
+STAGES.push(
+ {id:18,name:'재난 발생 : 우박',special:'DISASTER',hail:true,desc:'보스 「3n+1」 3페이즈 — 콜라츠 추측. 우박과 우박수 그래프를 피하며 BOSS QUIZ까지. 몬스터 7마리 처치 후 보스전 · 축소된 맵. 클리어 시 TIER LL 「우박수 룰렛」',killQuota:7,types:['polygon'],diffMult:6.5,bossHpMult:1,bossDmgMult:2.6,bossType:'hail',rewardSkill:'collatz',bonusP:142857,storyEnd:HAIL_STORY.end},
+ {id:19,name:'4개의 법칙',special:'DLC 2',dlc2:true,desc:'DLC 2 · 사칙연산 — 덧셈뺄셈 · 곱셈구구만 사용 가능(각성 OK). 20마리 처치 후 보스 「÷」 (HP 120,000). 클리어 시 초각성 기회',killQuota:20,types:['point','segment','polygon'],diffMult:1.7,bossHpMult:1,bossDmgMult:1.5,bossType:'divider',storyEnd:LAW_STORY.end}
+);
+var HAIL_IDX=STAGES.length-2, LAW_IDX=STAGES.length-1, HAIL_HP=142857, LAW_HP=120000, LAW_HARD=40000, LAW_PRICE=100000;
+var _stlP=stLabel; stLabel=function(i){ var s=STAGES[i]; return (s&&s.special)?s.special:_stlP(i); };
+BOSS_QUIZ_CONCEPTS.divider=[{n:'나눗셈 (세·네 자리 ÷ 한·두 자리)',f:'몫이 정수로 떨어진다. 예) 1872 ÷ 24 = 78 · 0으로 나누는 문제는 정의되지 않으므로 무조건 오답 처리된다'}];
+BOSS_QUIZ_CONCEPTS.hail=[{n:'콜라츠 추측 (우박수)',f:'짝수면 n/2, 홀수면 3n+1. 예) 7 → 22 → 11 → 34 → 17 → 52 (5번 진행하면 52) · 1 에 닿기까지 횟수 · 수열의 최댓값'}];
+
+/* ---------- 4) 메타 ---------- */
+var _nmP=normalizeMeta;
+normalizeMeta=function(m){ var d=_nmP(m);
+  d.superAwake=(m&&m.superAwake&&typeof m.superAwake==='object')?m.superAwake:{};
+  d.saOn=(m&&m.saOn&&typeof m.saOn==='object')?m.saOn:{};
+  d.gaho=!!(m&&m.gaho); if(m&&m.dlc&&typeof m.dlc==='object') d.dlc=m.dlc; return d; };
+meta=loadMeta(currentUsername());
+var _auaP=adminUnlockAll;
+adminUnlockAll=function(){ _auaP(); if(!isAdmin()||!meta) return; meta.superAwake=meta.superAwake||{}; meta.saOn=meta.saOn||{}; ['add','mul'].forEach(function(k){ meta.superAwake[k]=true; if(meta.saOn[k]===undefined) meta.saOn[k]=true; }); meta.gaho=true; };
+
+/* ---------- 5) DLC 2 입장권 · 키 ---------- */
+var LAW_KEY=(window.ECLIPSILON_CONFIG&&window.ECLIPSILON_CONFIG.dlc2Key)||'4laws';
+try{ var _lk2=JSON.parse(localStorage.getItem('eclipsilon_dlc2_local')||'null'); if(_lk2&&_lk2.key) LAW_KEY=_lk2.key; }catch(e){}
+function lawLoad(cb){
+  if(typeof sb==='undefined'||!sb){ cb&&cb(); return; }
+  sb.from('app_settings').select('key,value').eq('key','dlc2_key').then(function(r){ if(r&&!r.error&&r.data&&r.data[0]&&r.data[0].value) LAW_KEY=String(r.data[0].value); cb&&cb(); },function(){ cb&&cb(); });
+}
+function lawSave(k,cb){
+  LAW_KEY=k; try{ localStorage.setItem('eclipsilon_dlc2_local',JSON.stringify({key:k})); }catch(e){}
+  if(typeof sb==='undefined'||!sb){ cb&&cb('서버에 연결되어 있지 않습니다'); return; }
+  sb.from('app_settings').upsert([{key:'dlc2_key',value:String(k)}]).then(function(r){ cb&&cb(r&&r.error?r.error.message:null); },function(){ cb&&cb('전송 실패'); });
+}
+function lawState(){ meta.dlc=meta.dlc||{}; if(!meta.dlc.law4||typeof meta.dlc.law4!=='object') meta.dlc.law4={}; return meta.dlc.law4; }
+function lawHasPass(){ return isAdmin()||!!lawState().pass; }
+setTimeout(function(){ lawLoad(); },1500);
+window.__dlc2={key:function(){ return LAW_KEY; },save:lawSave,load:lawLoad,state:lawState,hasPass:lawHasPass,price:LAW_PRICE,idx:LAW_IDX,hailIdx:HAIL_IDX};
+
+var toastEl=null, toastT=0;
+function toast(t){ if(!toastEl){ toastEl=document.createElement('div'); toastEl.className='mono'; toastEl.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:100000;background:var(--ink);color:var(--bg);padding:10px 16px;font-size:13px;max-width:90vw;text-align:center;display:none'; document.body.appendChild(toastEl); }
+  toastEl.textContent=t; toastEl.style.display='block'; clearTimeout(toastT); toastT=setTimeout(function(){ toastEl.style.display='none'; },3200); }
+window.__eclToast=toast;
+function lawBlocked(){ var st=STAGES[selectedStageIdx]; return selectedMode==='story'&&st&&st.dlc2&&!lawHasPass(); }
+function hailLocked(){ return !isAdmin()&&!(meta.clearedStages&&meta.clearedStages[16]); }
+document.addEventListener('click',function(e){
+  var t=e.target&&e.target.closest&&e.target.closest('#loadoutStart,#goRetry'); if(!t) return;
+  var st=STAGES[selectedStageIdx];
+  if(lawBlocked()){ e.stopImmediatePropagation(); e.preventDefault(); toast('🎟 입장권이 없습니다 — 메뉴의 DLC 탭에서 100,000P를 내거나 키를 입력하세요.'); showScreen('menu'); return; }
+  if(selectedMode==='story'&&st&&st.hail&&hailLocked()){ e.stopImmediatePropagation(); e.preventDefault(); toast('🔒 STAGE 15 「Ω · 궁극의 방정식」을 클리어해야 재난에 맞설 수 있습니다.'); }
+},true);
+
+/* ---------- 6) 출전: 맵 크기 · DLC2 로드아웃 고정 ---------- */
+var _srP=startRun;
+startRun=function(mode,idx){
+  var st=(mode==='story')?STAGES[idx]:null;
+  WORLD_W=(st&&st.hail)?1500:2400; WORLD_H=(st&&st.hail)?1100:1800;
+  if(st&&st.dlc2&&!isAdmin()){ var s=lawState(); s.pass=false; s.runs=(s.runs||0)+1; saveMeta(); }
+  _srP(mode,idx);
+  if(!G||!G.running) return;
+  if(st&&st.dlc2){
+    var lo=[]; ['add','mul'].forEach(function(id){ if(meta.owned[id]) lo.push({id:id,sk:skillById(id),lv:meta.owned[id],cdLeft:0}); });
+    if(!lo.length) lo.push({id:'add',sk:skillById('add'),lv:1,cdLeft:0});
+    while(lo.length<4) lo.push(null); G.loadout=lo; renderSkillBar();
+    spawnFloat(G.player.x,G.player.y-70,'4개의 법칙 — 덧셈뺄셈 · 곱셈구구만 허용');
+  }
+  if(st&&st.hail){ cx().hl0={hailT:1600}; setTimeout(function(){ if(G&&G.running&&G.stage===st) spawnFloat(G.player.x,G.player.y-80,'⚠ 재난 발생 — 우박이 떨어진다'); },300); }
+};
+var _uuP=useUlt;
+useUlt=function(){ if(G&&G.stage&&G.stage.dlc2){ spawnFloat(G.player.x,G.player.y-40,'4개의 법칙 — 궁극기 봉인'); return; } return _uuP(); };
+
+/* ---------- 7) 우박 스테이지 몹: 육각형 + 5단계 보스 ---------- */
+var _seP=spawnEnemy;
+spawnEnemy=function(el){
+  var n0=G?G.enemies.length:0; _seP(el);
+  if(!G||!G.stage||!G.stage.hail||G.phase==='boss') return;
+  var e=G.enemies[G.enemies.length-1]; if(!e||G.enemies.length===n0) return;
+  var minis=G.enemies.filter(function(x){ return x.mini&&!x.dead; }).length;
+  if(!el && minis<2 && Math.random()<0.34){
+    var k=1+G.phaseElapsed/1000*0.006;
+    e.type='boss'; e.mini=true; e.r=34; e.hp=e.maxHp=280*2.7*2.2*k; e.dmg=22*1.7*1.5; e.spd=92; e.state='boss'; e.atk=1800+rnd(1200); e.angle=0;
+  }
+};
+
+/* ---------- 8) 보스 스폰 ---------- */
+var _spbP=spawnBoss;
+spawnBoss=function(){
+  _spbP(); var b=G&&G.boss; if(!b) return; var c=cx();
+  function banner(t){ var bs=document.querySelectorAll('.bossBanner'); if(bs.length){ var n=bs[bs.length-1].querySelector('.bb-n'); if(n) n.textContent=t; } }
+  if(b.bossType==='divider'){
+    b.maxHp=b.hp=LAW_HP; b.label='÷'; b.spd=58; b.r=44;
+    c.dv={quizT:15000,qn:0,hard:false,atk:0,healT:16000,show:0};
+    document.getElementById('bossName').textContent='4개의 법칙 · 보스 「÷ 나눗셈」';
+    banner('÷');
+    setTimeout(function(){ if(G&&G.running&&G.boss===b) showStory(LAW_STORY.intro); },80);
+  }
+  if(b.bossType==='hail'){
+    b.maxHp=b.hp=HAIL_HP; b.label='3n+1'; b.spd=62; b.r=50;
+    c.hl={ph:0,trans:0,hailT:900,graphT:3500,quizT:9000,tpT:7000,ra:0,graphs:[],calm:0,lastTrue:0,msgT:0};
+    G.enemies=G.enemies.filter(function(e){ return e===b; });
+    document.getElementById('bossName').textContent='재난 · 보스 「3n+1」  PHASE 1 / 3';
+    banner('3n+1');
+    setTimeout(function(){ if(G&&G.running&&G.boss===b) showStory(HAIL_STORY.intro); },80);
+  }
+};
+
+/* ---------- 9) 피해 후킹 ---------- */
+var HAIL_BYPASS=false;
+var _ahP=adminHit; adminHit=function(v){ HAIL_BYPASS=true; try{ _ahP(v); } finally{ HAIL_BYPASS=false; } };
+function trueOpen(){ return HAIL_BYPASS||(G&&NOW()<(G.trueUntil||0)); }
+window.__eclTrueAwake=function(ms){ if(G) G.trueUntil=NOW()+(ms||4000); };
+var _dmP=damageEnemy;
+damageEnemy=function(e,dmg){
+  if(e&&G&&e.type==='boss'&&G.boss===e&&!e.dead){
+    if(e.bossType==='divider'){ dmg*=2; }
+    if(e.bossType==='hail'){
+      var h=G.cx&&G.cx.hl; if(h&&h.trans>0) return;
+      if(trueOpen()){ if(h) h.lastTrue=NOW(); }
+      else { dmg*=0.003; if(h&&NOW()>h.msgT){ h.msgT=NOW()+2600; spawnFloat(e.x,e.y-80,'❄ 진각성 없이는 우박이 멈추지 않는다 (피해 0.3%)'); } }
+      if(h&&h.ph<2){ var floor=e.maxHp*(2-h.ph)/3; if(e.hp-dmg<floor+0.5) dmg=Math.max(0,e.hp-floor-0.5); }
+    }
+  }
+  _dmP(e,dmg);
+};
+
+/* ---------- 10) 진각성 · TIER LL 발동 후킹 / 우박수 룰렛 ---------- */
+SKILL_POOL.push({id:'collatz',tier:'LL',secret:true,name:'우박수 룰렛',desc:'룰렛이 멈춘 수 n 의 우박수열이 1 에 닿을 때까지 우박이 쏟아진다 — 체인 길이에 비례한 피해.',
+  study:'콜라츠 추측: 짝수면 2로 나누고, 홀수면 3을 곱하고 1을 더한다. 어떤 자연수에서 시작해도 결국 1에 도달한다고 추측되지만 아직 증명되지 않았다.\n예) 27 은 111번 만에 1 이 되며 도중에 9232 까지 솟는다. 체인이 길수록(= 1까지 오래 걸릴수록) 이 스킬의 피해가 커진다.',
+  kind:'collatz',baseDmg:120,cd:30000,win:13000,pause:true,gen:function(){ return collatzQuiz(1); }});
+var _fsP=fireSkill;
+fireSkill=function(sk,lv){
+  if(sk&&(sk.trueAwake||sk.tier==='TRUE')) G.trueUntil=NOW()+4000;
+  if(sk&&sk.tier==='LL') G.lTierUntil=NOW()+2400;
+  if(sk&&sk.kind==='collatz'){
+    var p=G.player, d=sk.baseDmg*dmgMult(lv)*petMultiplier(), n;
+    n=(Math.random()<0.08)?pick([27,97,871,703,649,231]):randInt(2,999);
+    var ch=colChain(n);
+    tierFX(sk,p); p.invuln=Math.max(p.invuln,1800+ch.length*45);
+    cx().roul={t:0,spin:1500,n:n,ch:ch,i:0,stepT:0,stepMs:clamp(2600/ch.length,22,120),d:d,shown:randInt(2,999),flick:0,done:false,endT:0};
+    spawnFloat(p.x,p.y-64,'◆ 우박수 룰렛 회전!');
+    return;
+  }
+  return _fsP(sk,lv);
+};
+function roulTick(dt){
+  var c=cx(), R=c.roul; if(!R) return; var dtms=dt*1000, p=G.player;
+  R.t+=dtms;
+  if(R.t<R.spin){ R.flick-=dtms; if(R.flick<=0){ R.flick=45+R.t/25; R.shown=(R.t>R.spin-260)?R.n:randInt(2,999); } return; }
+  R.shown=R.n;
+  if(!R.done){
+    R.stepT-=dtms;
+    while(R.stepT<=0&&R.i<R.ch.length-1){
+      R.stepT+=R.stepMs; R.i++;
+      var v=R.ch[R.i], odd=(R.ch[R.i-1]%2===1), al=G.enemies.filter(function(e){ return !e.dead; });
+      var tg=(G.boss&&!G.boss.dead&&R.i%2===0)?G.boss:(al.length?pick(al):null);
+      var tx=tg?tg.x:p.x+(Math.random()-.5)*500, ty=tg?tg.y:p.y+(Math.random()-.5)*400;
+      G.projectiles.push({kind:'novafx',x:tx,y:ty,r:0,maxR:odd?95:70,life:260,maxLife:260});
+      addFX({kind:'psiHail',x:tx,y:ty,n:v,life:420,maxLife:420});
+      G.enemies.slice().forEach(function(e){ if(!e.dead&&dist(tx,ty,e.x,e.y)<=(odd?95:70)+e.r) damageEnemy(e,R.d*(odd?0.55:0.4)); });
+    }
+    if(R.i>=R.ch.length-1){ R.done=true; R.endT=1800; var L=R.ch.length-1;
+      blast(p.x,p.y,380,R.d*L*0.08); addFX({kind:'supernova',x:p.x,y:p.y,life:1200,maxLife:1200,r:20,maxR:420});
+      spawnFloat(p.x,p.y-80,R.n+' → 1 : '+L+' steps!'); }
+  } else { R.endT-=dtms; if(R.endT<=0) c.roul=null; }
+}
+
+/* ---------- 11) 초각성 (덧셈뺄셈 · 곱셈구구) ---------- */
+function saOwned(id){ return !!(meta.superAwake&&meta.superAwake[id]); }
+function saReady(id){ return saOwned(id)&&!!(meta.awakeOwned&&meta.awakeOwned[id])&&(meta.owned[id]||0)>=6; }
+function saActive(id){ return saReady(id)&&!(meta.saOn&&meta.saOn[id]===false); }
+function sgn(v){ return v<0?'−'+Math.abs(v):'+'+v; }
+var SA={
+ add:{name:'수직선 붕괴',gen:function(){
+    var t=rnd(2), s=[], i, k=4;
+    for(i=0;i<k;i++){ var v=randInt(103,989); s.push((i%2===0)===(Math.random()<0.75)?v:-v); }
+    if(!s.some(function(v){return v<0;})) s[1]=-s[1]; if(!s.some(function(v){return v>0;})) s[0]=-s[0];
+    var a=s.reduce(function(x,y){return x+y;},0);
+    if(t===0) return {q:'수직선 위 0 에서 출발해\n'+s.map(sgn).join(', ')+'\n만큼 차례로 이동한 위치는?',a:a,steps:s};
+    var txt=s.map(function(v,j){ return j===0?(v<0?'('+'−'+Math.abs(v)+')':String(v)):((Math.random()<0.5)?(v<0?' − '+Math.abs(v):' + '+v):(v<0?' + (−'+Math.abs(v)+')':' − (−'+v+')')); }).join('');
+    return {q:txt+' = ?',a:a,steps:s}; },
+  fire:function(d,c){
+    var p=G.player, px=p.x, py=p.y, pos=0, mx=1, i;
+    c.steps.reduce(function(acc,v){ acc+=v; mx=Math.max(mx,Math.abs(acc)); return acc; },0);
+    var unit=Math.min(0.95,560/mx), dl=320;
+    addFX({kind:'psiLine',x:px,y:py,unit:unit,steps:c.steps,ans:c.a,mx:mx,t0:NOW(),dl:dl,life:900+c.steps.length*dl+1600,maxLife:900+c.steps.length*dl+1600});
+    p.invuln=Math.max(p.invuln,c.steps.length*dl+1000);
+    c.steps.forEach(function(v,i){ safeLater(260+i*dl,function(){ var from=pos; pos+=v; var X=clamp(px+pos*unit,20,WORLD_W-20), X0=clamp(px+from*unit,20,WORLD_W-20);
+      lineStrike(X0,py,X,py,46,d*0.55,null,7); blast(X,py,180,d*1.0); spawnFloat(X,py-70,sgn(v)); }); });
+    safeLater(260+c.steps.length*dl+260,function(){ var X=clamp(px+c.a*unit,20,WORLD_W-20);
+      lineStrike(X,py-1000,X,py+1000,80,d*2.0,null,7); blast(X,py,400,d*2.2); addFX({kind:'supernova',x:X,y:py,life:1300,maxLife:1300,r:30,maxR:460});
+      spawnFloat(X,py-110,'= '+c.a+'  ✦✦ 수직선 붕괴'); });
+  }},
+ mul:{name:'곱셈 격자 폭풍',gen:function(){
+    var t=rnd(3), a, b, e;
+    if(t===0){ a=randInt(123,987); b=randInt(23,97); if(b%10===0) b++; return {q:a+' × '+b+' = ?',a:a*b,R:3+(a%4),C:3+(b%4)}; }
+    if(t===1){ a=randInt(13,97); b=randInt(13,97); e=randInt(3,9); return {q:a+' × '+b+' × '+e+' = ?',a:a*b*e,R:3+(a%4),C:3+(e%4)}; }
+    a=randInt(31,99); b=randInt(12,a-7); return {q:a+'² − '+b+'² = ?',a:a*a-b*b,R:3+(a%4),C:3+(b%4)}; },
+  fire:function(d,c){
+    var p=G.player, px=p.x, py=p.y, R=c.R, C=c.C, gap=62, k=0, i, j, n=R*C;
+    addFX({kind:'psiLattice',x:px,y:py,R:R,C:C,gap:gap,life:900+n*50+1400,maxLife:900+n*50+1400});
+    p.invuln=Math.max(p.invuln,n*50+1200);
+    for(i=0;i<R;i++) for(j=0;j<C;j++)(function(i,j,k){ safeLater(200+k*50,function(){
+      var lx=px+(j-(C-1)/2)*gap, ly=py+(i-(R-1)/2)*gap, t=nearestEnemy(lx,ly), an=t?Math.atan2(t.y-ly,t.x-lx):k*0.7;
+      G.projectiles.push({kind:'bolt',x:lx,y:ly,vx:Math.cos(an)*780,vy:Math.sin(an)*780,dmg:d*0.25,pierce:4,r:7,life:1500,hitSet:[]}); }); })(i,j,k++);
+    safeLater(260+n*50,function(){ var t=nearestEnemy(G.player.x,G.player.y), tx=t?t.x:px+p.faceDir.x*300, ty=t?t.y:py+p.faceDir.y*300;
+      [Math.PI/4,-Math.PI/4].forEach(function(a,w){ safeLater(w*160,function(){ rayStrike(tx-Math.cos(a)*1300,ty-Math.sin(a)*1300,a,2600,64,d*1.3,null,7); }); });
+      safeLater(420,function(){ blast(tx,ty,300,d*1.6); addFX({kind:'supernova',x:tx,y:ty,life:1100,maxLife:1100,r:20,maxR:340}); spawnFloat(tx,ty-90,'×  '+c.a+'  ✦✦ 곱셈 격자 폭풍'); }); });
+  }}
+};
+function saDmg(sk,lv){ var low=!!AW_LOWTIER[sk.tier]; return 10*AWD[sk.id]*(low?AW_NERF:1)*(AW_TIERBUF[sk.tier]||1)*dmgMult(lv)*petMultiplier(); }
+
+/* ---------- 12) DLC2: 체력 4만 이하 강화 문제 ---------- */
+function lawHardQ(id){
+  if(id==='add'){ var s=[],i; for(i=0;i<3;i++) s.push(randInt(11,99)*(Math.random()<0.5?-1:1)); if(s.every(function(v){return v>0;})) s[1]=-s[1]; if(s.every(function(v){return v<0;})) s[0]=-s[0];
+    return {q:'수직선 위 0 에서 출발해\n'+s.map(sgn).join(', ')+'\n만큼 차례로 이동한 위치는?',a:s[0]+s[1]+s[2]}; }
+  var a,b; if(Math.random()<0.5){ a=randInt(101,999); b=randInt(3,9); } else { a=randInt(12,99); b=randInt(12,99); }
+  return {q:a+' × '+b+' = ?',a:a*b};
+}
+function setQ(title,q){ document.getElementById('chTitle').textContent=title; document.getElementById('chQ').innerHTML=challengeQuestionHTML(q); document.getElementById('chBuf').innerHTML='&nbsp;'; }
+
+/* ---------- 13) 각성 보정: 적분(정수·√ 답만) · 편미분(항 2개 · 시간 1.5배) ---------- */
+function intOrRoot(v){ if(!isFinite(v)) return false; if(Math.abs(v-Math.round(v))<1e-9) return true;
+  for(var m=2;m<=300;m++){ var r=Math.sqrt(m); if(Math.abs(r-Math.round(r))<1e-9) continue; var k=v/r; if(Math.abs(k-Math.round(k))<1e-9&&Math.round(k)!==0) return true; } return false; }
+var _intGen=AW.integral.gen;
+AW.integral.gen=function(){
+  if(Math.random()<0.25){ var NS=[2,3,5,6,7,10,11,13,14,15], m=pick(NS);
+    if(Math.random()<0.5) return {q:'∫_{0}^{'+m+'} 1/√x dx = ?\n(무리수는 √ 키 · 예 2√3)',a:2*Math.sqrt(m),root:true};
+    var m2=pick([2,3,5,6,7]); return {q:'∫_{0}^{'+m2+'} (3/2)√x dx = ?\n(무리수는 √ 키 · 예 2√3)',a:m2*Math.sqrt(m2),root:true}; }
+  for(var i=0;i<40;i++){ var c=_intGen(); if(intOrRoot(c.a)) return c; }
+  var a=randInt(2,7),b=randInt(1,3); return {q:'∫_{-'+a+'}^{'+a+'} '+b+'|x| dx = ?',a:b*a*a};
+};
+AW.partial.gen=function(){
+  var a=pick([-4,-3,-2,-1,1,2,3,4]), b=pick([-3,-2,-1,1,2,3]), x0=pick([-3,-2,-1,1,2,3]), y0=pick([-3,-2,-1,1,2,3]), t=rnd(3), q, ans;
+  function cf(k,first){ var s=(k<0?'−':(first?'':'+')); var m=Math.abs(k); return (first?s:' '+s+' ')+(m===1?'':m); }
+  if(t===0){ q='f(x,y) = '+cf(a,true)+'x²y'+cf(b)+'xy²'; ans=a*x0*x0+2*b*x0*y0; }
+  else if(t===1){ q='f(x,y) = '+cf(a,true)+'x²y'+cf(b)+'y³'; ans=a*x0*x0+3*b*y0*y0; }
+  else { q='f(x,y) = '+cf(a,true)+'xy²'+cf(b)+'x³y'; ans=2*a*x0*y0+b*x0*x0*x0; }
+  return {q:q+'\n∂f/∂y 를 ('+x0+', '+y0+')에서 계산하면?',a:ans};
+};
+
+/* ---------- 14) 문제 열기 · 제출 · 시간초과 ---------- */
+var _ocP=openChallenge;
+openChallenge=function(i){
+  var slot=G.loadout[i];
+  if(slot&&SA[slot.id]&&saActive(slot.id)){
+    var c=SA[slot.id].gen(), T=20000;
+    G.challenge={slotIdx:i,sk:slot.sk,lv:slot.lv,q:c.q,a:c.a,buf:'',timeLeft:T,timeMax:T,sa:c};
+    G.freeze=true; document.getElementById('freezeBanner').style.display='block';
+    setQ('✦✦ 초각성 · '+slot.sk.name+' 「'+SA[slot.id].name+'」 (Lv.'+slot.lv+')',c.q);
+    document.getElementById('challenge').classList.add('show'); renderPad(); return;
+  }
+  _ocP(i);
+  var ch=G.challenge; if(!ch||ch.isBossQuiz) return;
+  if(ch.aw&&slot&&slot.id==='partial'){ ch.timeMax*=1.5; ch.timeLeft=ch.timeMax; }
+  if(G.stage&&G.stage.dlc2&&slot&&(slot.id==='add'||slot.id==='mul')&&G.boss&&!G.boss.dead&&G.boss.hp<LAW_HARD){
+    var h=lawHardQ(slot.id); ch.q=h.q; ch.a=h.a; ch.timeMax=Math.max(ch.timeMax*1.8,9000); ch.timeLeft=ch.timeMax;
+    setQ(document.getElementById('chTitle').textContent+' · ÷ 강화 문제 (시간 ↑)',h.q);
+  }
+};
+function divDone(ok,zero){
+  var p=G.player;
+  if(zero){ p.hp-=24; spawnFloat(p.x,p.y-34,'0으로 나눌 수 없다 — 정의되지 않음! −24'); SFX.play('bad'); return; }
+  if(ok){ spawnFloat(p.x,p.y-34,'정답 — …나눗셈은 아무것도 주지 않는다'); return; }
+  p.hp-=24; spawnFloat(p.x,p.y-34,'오답 −24');
+}
+function hailDone(ok){
+  var p=G.player, h=G.cx&&G.cx.hl;
+  if(ok){ if(h) h.calm=4500; spawnFloat(p.x,p.y-34,'정답 — 우박이 4.5초간 잦아든다'); return; }
+  var dm=[30,34,40][h?h.ph:0]; p.hp-=dm; spawnFloat(p.x,p.y-34,'오답 −'+dm+' · 우박 직격');
+}
+var _csP=challengeSubmit;
+challengeSubmit=function(){
+  var ch=G&&G.challenge;
+  if(ch&&(ch.isDiv||ch.isHail)){ var ok=!ch.zero&&ansEq(ch.buf,ch.a); closeChallenge(); document.getElementById('challenge').classList.remove('bossquiz'); if(ch.isDiv) divDone(ok,ch.zero); else hailDone(ok); return; }
+  if(ch&&ch.sa){ var ok2=ansEq(ch.buf,ch.a), slot=G.loadout[ch.slotIdx], sk=ch.sk, lv=ch.lv; closeChallenge(); slot.cdLeft=6000*cdMult(lv);
+    if(ok2){ tierFX({tier:'LL'},G.player); spawnFloat(G.player.x,G.player.y-70,'✦✦ 초각성 · '+sk.name+' 발동'); SA[sk.id].fire(saDmg(sk,lv),ch.sa); }
+    else spawnFloat(G.player.x,G.player.y-30,'오답!'); return; }
+  return _csP.apply(this,arguments);
+};
+var _ccP=cancelChallenge;
+cancelChallenge=function(){
+  var ch=G&&G.challenge;
+  if(ch&&(ch.isDiv||ch.isHail)){ closeChallenge(); document.getElementById('challenge').classList.remove('bossquiz'); if(ch.isDiv) divDone(false,ch.zero); else hailDone(false); return; }
+  if(ch&&ch.sa){ var slot=G.loadout[ch.slotIdx]; closeChallenge(); slot.cdLeft=6000*cdMult(ch.lv); spawnFloat(G.player.x,G.player.y-30,'시간초과!'); return; }
+  return _ccP.apply(this,arguments);
+};
+function openBQ(flag,title,q,a,T,extra){
+  G.challenge={isBossQuiz:true,q:q,a:a,buf:'',timeLeft:T,timeMax:T}; G.challenge[flag]=true; if(extra) for(var k in extra) G.challenge[k]=extra[k];
+  document.getElementById('freezeBanner').style.display='none'; setQ(title,q);
+  var el=document.getElementById('challenge'); el.classList.add('show'); el.classList.add('bossquiz'); renderPad();
+}
+function divQuiz(zero){
+  var d,q,N,i;
+  if(zero){ N=randInt(100,2400); openBQ('isDiv','BOSS QUIZ · 「÷」 나눗셈 — 틀리면 −24 (맞혀도 효과 없음)',N+' ÷ 0 = ?',NaN,10000,{zero:true}); return; }
+  for(i=0;i<400;i++){ d=randInt(7,59); if(d%10===0) continue; var lo=Math.max(12,Math.ceil(100/d)), hi=Math.floor(2400/d); if(hi<lo) continue; q=randInt(lo,hi); if(q%10===0) continue; N=d*q; if(N>=100&&N<=2400) break; }
+  openBQ('isDiv','BOSS QUIZ · 「÷」 나눗셈 — 틀리면 −24 (맞혀도 효과 없음)',N+' ÷ '+d+' = ?',q,10000);
+}
+
+/* ---------- 15) 보스 공격 패턴 ---------- */
+var _sbbP=spawnBossBolts;
+spawnBossBolts=function(b){
+  var c=cx(), p=G.player, a0=Math.atan2(p.y-b.y,p.x-b.x), i;
+  if(b.bossType==='divider'&&c.dv){
+    var hard=b.hp<LAW_HARD, k=(c.dv.atk++)%3, dm=b.dmg;
+    if(k===0){ var n=hard?28:22, gap=hard?3:4, g=rnd(n), off=Math.random()*TAU;
+      for(i=0;i<n;i++){ if(((i-g+n)%n)<gap) continue; hb(b.x,b.y,i/n*TAU+off,hard?220:185,dm*0.42,7,40); }
+      spawnFloat(b.x,b.y-74,'나머지 탄막 — 틈('+gap+'칸)으로 빠져나가라'); }
+    else if(k===1){ for(i=-1;i<=1;i++) hb(b.x,b.y,a0+i*0.28,225,dm*0.5,10,200,{sp:hard?2:1,spT:720});
+      spawnFloat(b.x,b.y-74,'÷ 2 — 분할탄'); }
+    else { c.haz.push({x0:0,y0:b.y-16,x1:WORLD_W,y1:b.y+16,warn:1000,life:550,dmg:14});
+      if(hard) c.haz.push({x0:b.x-16,y0:0,x1:b.x+16,y1:WORLD_H,warn:1000,life:550,dmg:14});
+      [-1,1].forEach(function(s){ hb(b.x,b.y+s*64,a0,150,dm*0.5,11,300,{seek:2600,life:4200}); });
+      spawnFloat(b.x,b.y-74,'분수선 — ÷ 의 막대를 피하라'); }
+    if(hard&&k===0) c.sp2={left:22,t:0,a:Math.random()*TAU,arms:2,spd:170,h:20};
+    c.resetAtk=hard?1700:2300; return;
+  }
+  if(b.bossType==='hail'&&c.hl){
+    var h=c.hl; if(h.trans>0){ c.resetAtk=900; return; }
+    var dm2=b.dmg, n2=h.ph===0?20:24, g2=rnd(n2), gp=h.ph===2?2:3, off2=Math.random()*TAU;
+    for(i=0;i<n2;i++){ if(((i-g2+n2)%n2)<gp) continue; hb(b.x,b.y,i/n2*TAU+off2,h.ph===2?235:200,dm2*0.38,7,190+i*3); }
+    if(h.ph>=1){ for(i=-1;i<=1;i++) hb(b.x,b.y,a0+i*0.22,270,dm2*0.42,9,170,{sp:h.ph===2?2:1,spT:650}); }
+    if(h.ph===2){ var off3=off2+TAU/(n2*2); for(i=0;i<n2;i++){ if(((i-g2+n2)%n2)<gp+1) continue; hb(b.x,b.y,i/n2*TAU+off3,150,dm2*0.36,6,210); } c.sp2={left:30,t:0,a:Math.random()*TAU,arms:3,spd:200,h:190}; }
+    c.resetAtk=[2100,1700,1300][h.ph]; return;
+  }
+  return _sbbP(b);
+};
+
+/* ---------- 16) 매 프레임 ---------- */
+var HP_CFG=[{hail:430,hn:1,graph:6800,gn:1,quiz:13000,dmg:18},{hail:300,hn:2,graph:5400,gn:2,quiz:11000,dmg:20},{hail:220,hn:3,graph:4300,gn:3,quiz:9000,dmg:22}];
+function addHail(x,y,warn,dmg,n){ var c=cx(); c.hails=c.hails||[]; c.hails.push({x:clamp(x,24,WORLD_W-24),y:clamp(y,24,WORLD_H-24),w:warn,mw:warn,r:46,dmg:dmg,n:n||randInt(2,99)}); }
+function addGraph(orient){
+  var c=cx(), n, ch, i; for(i=0;i<60;i++){ n=randInt(7,99); ch=colChain(n); if(ch.length>=14&&ch.length<=60) break; }
+  var mx=colMax(ch), pts=[], L=ch.length-1, M=60;
+  for(i=0;i<=L;i++){ var u=i/L, v=Math.log(ch[i])/Math.log(mx);
+    if(orient==='h') pts.push({x:M+u*(WORLD_W-2*M),y:WORLD_H-M-v*(WORLD_H-2*M)}); else pts.push({x:M+v*(WORLD_W-2*M),y:M+u*(WORLD_H-2*M)}); }
+  c.hl.graphs.push({pts:pts,n:n,L:L,mx:mx,w:1400,mw:1400,life:950,orient:orient});
+}
+function nearPoly(px,py,pts,w){ for(var i=1;i<pts.length;i++) if(segDist(px,py,pts[i-1].x,pts[i-1].y,pts[i].x,pts[i].y)<w) return true; return false; }
+function hailQuiz(){ var h=cx().hl, c=collatzQuiz(h.ph); openBQ('isHail','BOSS QUIZ · 「3n+1」 콜라츠 — 틀리면 −'+[30,34,40][h.ph]+' · 정답 시 우박 잠잠',c.q,c.a,[9500,9000,8500][h.ph]); }
+function hailPhase(b,h){
+  h.ph++; h.trans=2400; G.projectiles=G.projectiles.filter(function(pr){ return pr.kind!=='bossbolt'; }); h.graphs=[]; cx().hails=[];
+  b.hp=b.maxHp*(3-h.ph)/3; burstFX(b.x,b.y,4);
+  cx().orbs.push({x:clamp(G.player.x+90,40,WORLD_W-40),y:G.player.y,kind:'heal',t:0,life:9000});
+  document.getElementById('bossName').textContent='재난 · 보스 「3n+1」  PHASE '+(h.ph+1)+' / 3';
+  var el=document.createElement('div'); el.className='bossBanner'; el.innerHTML='<div class="bb-s mono">— PHASE '+(h.ph+1)+' / 3 —</div><div class="bb-n" style="font-size:clamp(22px,5vw,40px)">'+['','27 → 9232 : 폭주하는 우박','4 → 2 → 1 : 영원한 고리'][h.ph]+'</div><div class="bb-t">우박 · 그래프 · BOSS QUIZ</div>';
+  document.body.appendChild(el); setTimeout(function(){ el.remove(); },2400);
+  showStory(HAIL_STORY['p'+(h.ph+1)]);
+}
+function psiTick(dt){
+  var c=cx(), p=G.player, b=G.boss, dtms=dt*1000, st=G.stage, i;
+  if(G.freeze) return;
+  roulTick(dt);
+  G.projectiles.forEach(function(pr){ if(pr.kind==='bossbolt'&&pr.seek>0){ pr.seek-=dtms; var a=Math.atan2(p.y-pr.y,p.x-pr.x), sp=Math.hypot(pr.vx,pr.vy)||150, ca=Math.atan2(pr.vy,pr.vx), da=Math.atan2(Math.sin(a-ca),Math.cos(a-ca)), na=ca+clamp(da,-2.2*dt,2.2*dt); pr.vx=Math.cos(na)*sp; pr.vy=Math.sin(na)*sp; } });
+  if(!st) return;
+  if(st.dlc2&&G.phase==='boss'&&b&&!b.dead&&b.bossType==='divider'&&c.dv){
+    var dv=c.dv;
+    if(!dv.hard&&b.hp<LAW_HARD){ dv.hard=true; burstFX(b.x,b.y,4); showStory(LAW_STORY.half); b.spd=72; }
+    dv.quizT-=dtms;
+    if(dv.quizT<=0&&!G.challenge){ var zero=(dv.qn%3===2); dv.qn++; divQuiz(zero); dv.quizT=25000; }
+    dv.healT-=dtms; if(dv.healT<=0){ dv.healT=20000; var q=nearP(110,300); c.orbs.push({x:q.x,y:q.y,kind:'heal',t:0,life:8000}); }
+  }
+  if(st.hail){
+    G.enemies.forEach(function(e){ if(e.mini&&!e.dead){ e.atk-=dtms; if(e.atk<=0){ e.atk=2500+rnd(700); var off=Math.random()*TAU; for(var k=0;k<12;k++) hb(e.x,e.y,off+k/12*TAU,210,e.dmg*0.42,7,200); } } });
+    c.hails=c.hails||[];
+    var boss=(G.phase==='boss'&&b&&!b.dead&&b.bossType==='hail')?b:null, h=boss?c.hl:null;
+    if(!boss){ var h0=c.hl0||(c.hl0={hailT:1600}); h0.hailT-=dtms; if(h0.hailT<=0){ h0.hailT=900; var q2=nearP(0,360); addHail(q2.x,q2.y,1000,10); } }
+    else if(h){
+      if(h.trans>0){ h.trans-=dtms; }
+      else {
+        if(h.ph<2&&b.hp<=b.maxHp*(2-h.ph)/3+0.6){ hailPhase(b,h); return; }
+        var P=HP_CFG[h.ph];
+        if(NOW()-h.lastTrue>1500){ var ceil=b.maxHp*(3-h.ph)/3; b.hp=Math.min(ceil,b.hp+b.maxHp*0.004*dt); }
+        if(h.calm>0) h.calm-=dtms;
+        h.hailT-=dtms;
+        if(h.hailT<=0){ h.hailT=P.hail*(h.calm>0?3:1); for(i=0;i<P.hn;i++){ var aim=(h.ph>=1&&i===0&&Math.random()<0.5), q3=aim?{x:p.x+p.vx*0.5,y:p.y+p.vy*0.5}:nearP(0,380); addHail(q3.x,q3.y,h.ph===2?780:900,P.dmg); } }
+        h.graphT-=dtms;
+        if(h.graphT<=0){ h.graphT=P.graph; for(i=0;i<P.gn;i++) addGraph((h.ph>=1&&i===1)?'v':(i===2?(Math.random()<0.5?'h':'v'):'h')); }
+        if(!G.challenge){ h.quizT-=dtms; if(h.quizT<=0){ hailQuiz(); h.quizT=P.quiz; } }
+        if(h.ph>=1){ h.tpT-=dtms; if(h.tpT<=0){ h.tpT=h.ph===2?4800:6500; var q4=nearP(220,380); b.x=q4.x; b.y=q4.y; burstFX(b.x,b.y,3); spawnFloat(b.x,b.y-70,'홀수 → 3n+1 도약');
+          var o2=Math.random()*TAU; for(i=0;i<16;i++) hb(b.x,b.y,o2+i/16*TAU,190,b.dmg*0.36,7,200); } }
+        if(h.ph===2){ h.ra+=dt*0.62; for(i=0;i<3;i++){ if(hitRay(p.x,p.y,b.x,b.y,h.ra+i*TAU/3,p.r+5)) hurt(13,'4·2·1 고리'); } }
+        h.graphs.forEach(function(g){ if(g.w>0){ g.w-=dtms; return; } g.life-=dtms; if(nearPoly(p.x,p.y,g.pts,p.r+10)) hurt(22,'우박수 그래프'); });
+        h.graphs=h.graphs.filter(function(g){ return g.life>0; });
+      }
+    }
+    c.hails.forEach(function(hl){ hl.w-=dtms; if(hl.w<=0&&!hl.hit){ hl.hit=true;
+      G.projectiles.push({kind:'novafx',x:hl.x,y:hl.y,r:0,maxR:hl.r,life:240,maxLife:240});
+      if(dist(hl.x,hl.y,p.x,p.y)<hl.r+p.r) hurt(hl.dmg,'우박');
+      if(hl.n%2===1&&boss){ var o=Math.random()*TAU; for(var k=0;k<6;k++) hb(hl.x,hl.y,o+k/6*TAU,170,hl.dmg*0.6,6,200); } } });
+    c.hails=c.hails.filter(function(hl){ return !hl.hit||hl.w>-260; });
+  }
+}
+var _upP=update;
+update=function(dt){ _upP(dt); if(G&&G.running){ try{ psiTick(dt); }catch(err){ if(window.console) console.error('psi',err); } } };
+
+/* ---------- 17) 렌더 ---------- */
+var snow=[];
+function drawPsi(){
+  var cm=camP(), ink=inkC(), c=cx(), p=G.player, b=G.boss, st=G.stage, tt=NOW()/1000, i;
+  ctx.save(); ctx.textAlign='center'; ctx.textBaseline='alphabetic';
+  // 초각성 FX
+  G.fx.forEach(function(f){
+    var a=Math.max(0,f.life/f.maxLife);
+    if(f.kind==='psiLine'){ var o=SC(f.x,f.y,cm), L=f.mx*f.unit+90, el=NOW()-f.t0;
+      ctx.globalAlpha=Math.min(1,a*2); ctx.strokeStyle=hue(200+tt*60); ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(o.x-L,o.y); ctx.lineTo(o.x+L,o.y); ctx.stroke();
+      ctx.fillStyle=ink; ctx.font='700 11px JetBrains Mono,monospace'; var stp=1; (function(){ var cands=[1,2,5,10,20,50,100,200,500,1000,2000,5000]; for(var ci=0;ci<cands.length;ci++){ stp=cands[ci]; if(stp*f.unit>=70) break; } })();
+      for(var v=-Math.floor(f.mx/stp)*stp; v<=f.mx; v+=stp){ var X=o.x+v*f.unit; ctx.strokeStyle=ink; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(X,o.y-8); ctx.lineTo(X,o.y+8); ctx.stroke(); ctx.fillText(String(v),X,o.y+22); }
+      var pos=0, prev=0; for(i=0;i<f.steps.length;i++){ var tStart=260+i*f.dl; if(el<tStart) break; prev=pos; pos+=f.steps[i]; var k2=Math.min(1,(el-tStart)/220), X0=o.x+prev*f.unit, X1=o.x+(prev+(pos-prev)*k2)*f.unit;
+        ctx.strokeStyle=hue(40+i*70); ctx.lineWidth=5; ctx.beginPath(); ctx.moveTo(X0,o.y); ctx.quadraticCurveTo((X0+X1)/2,o.y-90,X1,o.y); ctx.stroke();
+        ctx.fillStyle=hue(40+i*70); ctx.font='700 15px JetBrains Mono,monospace'; ctx.fillText(sgn(f.steps[i]),(X0+X1)/2,o.y-58); }
+      if(el>260+f.steps.length*f.dl+200){ var XA=o.x+f.ans*f.unit; ctx.fillStyle=hue(tt*200); ctx.font='700 30px JetBrains Mono,monospace'; ctx.fillText(String(f.ans),XA,o.y-120); }
+      ctx.globalAlpha=1; }
+    if(f.kind==='psiLattice'){ var o2=SC(f.x,f.y,cm), gp=f.gap; ctx.globalAlpha=Math.min(1,a*2);
+      for(var r=0;r<f.R;r++) for(var cc=0;cc<f.C;cc++){ var X2=o2.x+(cc-(f.C-1)/2)*gp, Y2=o2.y+(r-(f.R-1)/2)*gp; ctx.strokeStyle=hue((r*f.C+cc)*24+tt*120); ctx.lineWidth=3; ctx.beginPath(); ctx.arc(X2,Y2,9+Math.sin(tt*8+r+cc)*3,0,TAU); ctx.stroke(); }
+      ctx.strokeStyle=ink; ctx.lineWidth=1.5; ctx.globalAlpha=Math.min(1,a*2)*0.5;
+      for(r=0;r<f.R;r++){ ctx.beginPath(); ctx.moveTo(o2.x-(f.C-1)/2*gp,o2.y+(r-(f.R-1)/2)*gp); ctx.lineTo(o2.x+(f.C-1)/2*gp,o2.y+(r-(f.R-1)/2)*gp); ctx.stroke(); }
+      for(cc=0;cc<f.C;cc++){ ctx.beginPath(); ctx.moveTo(o2.x+(cc-(f.C-1)/2)*gp,o2.y-(f.R-1)/2*gp); ctx.lineTo(o2.x+(cc-(f.C-1)/2)*gp,o2.y+(f.R-1)/2*gp); ctx.stroke(); }
+      ctx.globalAlpha=Math.min(1,a*2); ctx.fillStyle=ink; ctx.font='700 16px JetBrains Mono,monospace'; ctx.fillText(f.R+' × '+f.C,o2.x,o2.y-(f.R-1)/2*gp-26); ctx.globalAlpha=1; }
+    if(f.kind==='psiHail'){ var o3=SC(f.x,f.y,cm); ctx.globalAlpha=a; ctx.fillStyle=hue(195); ctx.font='700 16px JetBrains Mono,monospace'; ctx.fillText(String(f.n),o3.x,o3.y-24-(1-a)*30); ctx.globalAlpha=1; }
+  });
+  // DLC2 보스
+  if(b&&!b.dead&&b.bossType==='divider'){ var bs=SC(b.x,b.y,cm);
+    ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#fff'; ctx.beginPath(); ctx.arc(bs.x,bs.y,b.r*0.82,0,TAU); ctx.fill();
+    ctx.fillStyle=ink; ctx.beginPath(); ctx.arc(bs.x,bs.y-24,7,0,TAU); ctx.fill(); ctx.beginPath(); ctx.arc(bs.x,bs.y+24,7,0,TAU); ctx.fill(); ctx.fillRect(bs.x-26,bs.y-4,52,8);
+    if(b.hp<LAW_HARD){ ctx.strokeStyle=hue(0); ctx.lineWidth=3; ctx.setLineDash([6,6]); ctx.beginPath(); ctx.arc(bs.x,bs.y,b.r+18+Math.sin(tt*6)*3,0,TAU); ctx.stroke(); ctx.setLineDash([]); }
+    var dv=c.dv; if(dv){ ctx.fillStyle=ink; ctx.font='700 14px JetBrains Mono,monospace';
+      var qs=G.challenge&&G.challenge.isDiv?'나눗셈 문제 풀이 중':('다음 나눗셈 문제 '+Math.max(0,dv.quizT/1000).toFixed(1)+'s'+((dv.qn%3===2)?'  · ⚠ 수상한 문제':''));
+      ctx.fillText('÷ '+qs+(b.hp<LAW_HARD?'   ▶ 강화 문제 (체력 4만 이하)':''),VW/2,74); } }
+  // 우박 스테이지
+  if(st&&st.hail){
+    (c.hails||[]).forEach(function(hl){ var q=SC(hl.x,hl.y,cm), k=1-Math.max(0,hl.w)/hl.mw;
+      if(!hl.hit){ ctx.globalAlpha=0.25+0.45*k; ctx.strokeStyle=hue(200); ctx.lineWidth=2; ctx.setLineDash([5,5]); ctx.beginPath(); ctx.arc(q.x,q.y,hl.r,0,TAU); ctx.stroke(); ctx.setLineDash([]);
+        ctx.globalAlpha=0.18*k; ctx.fillStyle=hue(200); ctx.beginPath(); ctx.arc(q.x,q.y,hl.r*k,0,TAU); ctx.fill();
+        var sy=q.y-(1-k)*260; ctx.globalAlpha=1; ctx.fillStyle='#e8f6ff'; ctx.strokeStyle=hue(205); ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(q.x,sy-15); ctx.lineTo(q.x+11,sy); ctx.lineTo(q.x,sy+15); ctx.lineTo(q.x-11,sy); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle='#123'; ctx.font='700 10px JetBrains Mono,monospace'; ctx.fillText(String(hl.n),q.x,sy+4); }
+      else { ctx.globalAlpha=Math.max(0,1+hl.w/260); ctx.strokeStyle=hue(195); ctx.lineWidth=3; ctx.beginPath(); ctx.arc(q.x,q.y,hl.r*(1.1-hl.w/400),0,TAU); ctx.stroke(); }
+      ctx.globalAlpha=1; });
+    var h=c.hl;
+    if(h){ h.graphs.forEach(function(g){ var live=g.w<=0; ctx.globalAlpha=live?0.95:0.55; ctx.strokeStyle=live?hue(190+tt*90):hue(200); ctx.lineWidth=live?7:2; ctx.setLineDash(live?[]:[10,8]);
+        ctx.beginPath(); g.pts.forEach(function(pt,j){ var q=SC(pt.x,pt.y,cm); if(j) ctx.lineTo(q.x,q.y); else ctx.moveTo(q.x,q.y); }); ctx.stroke(); ctx.setLineDash([]);
+        if(live){ ctx.globalAlpha=0.25; ctx.lineWidth=22; ctx.stroke(); }
+        var q0=SC(g.pts[0].x,g.pts[0].y,cm); ctx.globalAlpha=1; ctx.fillStyle=hue(200); ctx.font='700 13px JetBrains Mono,monospace'; ctx.textAlign='left'; ctx.fillText('n='+g.n+' · '+g.L+' steps · max '+g.mx+(live?'':'  (경고)'),q0.x+8,q0.y-12); ctx.textAlign='center'; });
+      if(b&&!b.dead&&b.bossType==='hail'){ var bs2=SC(b.x,b.y,cm);
+        if(h.ph===2){ ctx.lineWidth=h.trans>0?2:6; ctx.globalAlpha=h.trans>0?0.4:0.85; for(i=0;i<3;i++){ var an=h.ra+i*TAU/3; ctx.strokeStyle=hue(190+i*50); ctx.beginPath(); ctx.moveTo(bs2.x,bs2.y); ctx.lineTo(bs2.x+Math.cos(an)*3200,bs2.y+Math.sin(an)*3200); ctx.stroke();
+          ctx.fillStyle=hue(190+i*50); ctx.font='700 18px JetBrains Mono,monospace'; ctx.fillText(['4','2','1'][i],bs2.x+Math.cos(an)*120,bs2.y+Math.sin(an)*120); } ctx.globalAlpha=1; }
+        ctx.strokeStyle=hue(195+tt*40); ctx.lineWidth=3; for(i=0;i<6;i++){ var a6=tt*0.8+i*TAU/6, R6=b.r+26; ctx.beginPath(); ctx.moveTo(bs2.x+Math.cos(a6)*(R6-10),bs2.y+Math.sin(a6)*(R6-10)); ctx.lineTo(bs2.x+Math.cos(a6)*(R6+14),bs2.y+Math.sin(a6)*(R6+14)); ctx.stroke(); }
+        ctx.fillStyle=ink; ctx.font='700 13px JetBrains Mono,monospace';
+        var stt=''; for(i=0;i<3;i++) stt+=(i<h.ph?'■':i===h.ph?'◆':'□')+' ';
+        ctx.fillText(stt+' PHASE '+(h.ph+1)+' · '+['우박의 시작','폭주하는 우박','4 → 2 → 1'][h.ph]+(h.trans>0?'  (전환 중)':''),VW/2,74);
+        var open=NOW()-h.lastTrue<1500; ctx.fillStyle=open?hue(130):hue(0);
+        ctx.fillText(open?'✦ 진각성 — 우박이 멈춘다':'❄ 진각성 없음 — 받는 피해 0.3% · 초당 '+fmtN(b.maxHp*0.004)+' 재생',VW/2,94); }
+    }
+    G.enemies.forEach(function(e){ if(!e.mini||e.dead) return; var q=SC(e.x,e.y,cm); ctx.fillStyle=ink; ctx.font='700 16px JetBrains Mono,monospace'; ctx.fillText('5',q.x,q.y+6);
+      var bw=e.r*2.4; ctx.fillStyle='rgba(128,128,128,.35)'; ctx.fillRect(q.x-bw/2,q.y-e.r-14,bw,5); ctx.fillStyle=hue(0); ctx.fillRect(q.x-bw/2,q.y-e.r-14,bw*Math.max(0,e.hp/e.maxHp),5); });
+    // 눈
+    if(snow.length<140){ for(i=snow.length;i<140;i++) snow.push({x:Math.random()*VW,y:Math.random()*VH,v:30+Math.random()*90,r:0.8+Math.random()*2.4,ph:Math.random()*6}); }
+    ctx.fillStyle='#cfeaff'; snow.forEach(function(s){ s.y+=s.v/60; s.x+=Math.sin(tt+s.ph)*0.4; if(s.y>VH+4){ s.y=-4; s.x=Math.random()*VW; } ctx.globalAlpha=0.55; ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,TAU); ctx.fill(); });
+    ctx.globalAlpha=1;
+  }
+  // 우박수 룰렛 패널
+  var R=c.roul;
+  if(R){ var W2=Math.min(460,VW-24), X0=VW/2-W2/2, Y0=118, H2=150;
+    ctx.globalAlpha=0.92; ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()||'#fff'; ctx.fillRect(X0,Y0,W2,H2); ctx.globalAlpha=1;
+    ctx.strokeStyle=hue(tt*160); ctx.lineWidth=3; ctx.strokeRect(X0,Y0,W2,H2);
+    ctx.fillStyle=ink; ctx.font='700 11px JetBrains Mono,monospace'; ctx.textAlign='left'; ctx.fillText('◆ TIER LL · 우박수 룰렛',X0+10,Y0+16);
+    ctx.textAlign='center';
+    if(R.t<R.spin){ ctx.font='700 46px JetBrains Mono,monospace'; ctx.fillStyle=hue(tt*400); ctx.fillText(String(R.shown),VW/2,Y0+84);
+      ctx.strokeStyle=ink; ctx.lineWidth=2; for(i=0;i<12;i++){ var aa=tt*14+i*TAU/12; ctx.beginPath(); ctx.moveTo(VW/2+Math.cos(aa)*72,Y0+70+Math.sin(aa)*36); ctx.lineTo(VW/2+Math.cos(aa)*82,Y0+70+Math.sin(aa)*40); ctx.stroke(); } }
+    else { var L=R.ch.length-1, mx=colMax(R.ch), gx=X0+12, gy=Y0+30, gw=W2-24, gh=64;
+      ctx.strokeStyle=hue(200); ctx.lineWidth=2; ctx.beginPath();
+      for(i=0;i<=R.i;i++){ var X=gx+(L?i/L:1)*gw, Y=gy+gh-Math.log(R.ch[i])/Math.log(Math.max(2,mx))*gh; if(i) ctx.lineTo(X,Y); else ctx.moveTo(X,Y); } ctx.stroke();
+      ctx.fillStyle=ink; ctx.font='700 20px JetBrains Mono,monospace'; ctx.fillText('n = '+R.n,VW/2,Y0+26+gh+28);
+      var seg=R.ch.slice(Math.max(0,R.i-9),R.i+1).join(' → '); ctx.font='12px JetBrains Mono,monospace'; ctx.fillText((R.i>9?'… → ':'')+seg,VW/2,Y0+H2-22);
+      ctx.font='700 12px JetBrains Mono,monospace'; ctx.fillText('STEP '+R.i+' / '+L+' · max '+mx+(R.done?'  ✦ 체인 완료!':''),VW/2,Y0+H2-6); }
+  }
+  ctx.restore();
+}
+var _rdP=render;
+render=function(){ _rdP(); if(G){ try{ drawPsi(); }catch(e){ if(window.console) console.error('psi draw',e); } } };
+
+/* ---------- 18) 종료 보상 ---------- */
+var _erP=endRun;
+endRun=function(win){
+  var g=G; _erP(win);
+  if(!g||g.running) return;
+  var st=g.stage, el=document.getElementById('goDescText'), nb=document.getElementById('goNext');
+  if(g.mode==='story'&&st&&(st.special||(STAGES[g.stageIdx+1]&&STAGES[g.stageIdx+1].special))) nb.style.display='none';
+  if(!st||g._psiDone) return; g._psiDone=true;
+  if(st.dlc2){
+    var s=lawState(), msg='';
+    if(win){
+      s.cleared=true; s.clears=(s.clears||0)+1; meta.currency+=50000; msg=' ✦ 클리어 보상 +50,000P';
+      meta.superAwake=meta.superAwake||{}; meta.saOn=meta.saOn||{};
+      ['add','mul'].forEach(function(id){ var nm=skillById(id).name;
+        if(meta.superAwake[id]){ msg+=' · 「'+nm+'」 초각성 이미 보유'; return; }
+        if(Math.random()<0.5){ meta.superAwake[id]=true; meta.saOn[id]=true; msg+=' · ✦✦ 「'+nm+'」 초각성 성공!'; }
+        else msg+=' · 「'+nm+'」 초각성 실패 (50%)'; });
+      msg+=' · (로드아웃에서 ON/OFF · 각성 + Lv.6 필요) · 재입장은 다시 100,000P';
+      if(el) el.textContent=el.textContent.replace('모든 스테이지를 클리어했습니다!','「4개의 법칙」 클리어 — 나눗셈 「÷」 이 나누어떨어졌다.');
+    } else msg=' 🎟 입장권이 소모되었습니다 — 다시 도전하려면 100,000P 또는 키가 필요합니다.';
+    saveMeta(); if(el) el.textContent+=msg;
+  }
+  if(st.hail&&el){ if(win) el.textContent=el.textContent.replace('모든 스테이지를 클리어했습니다!','재난을 막아냈다 — 우박이 그쳤다.'); else el.textContent='우박이 그치지 않는다… (이 재난은 「진각성」 없이는 막을 수 없다)'; }
+};
+
+/* ---------- 19) 메뉴: 재난 카드(ADVANCED 맨 아래) · DLC2 카드 숨김 ---------- */
+var snowRAF=0;
+function snowLoop(){
+  var cvs=document.querySelectorAll('canvas.hc-snow'), vis=0;
+  Array.prototype.forEach.call(cvs,function(cv){
+    if(!document.body.contains(cv)||!cv.offsetParent) return; vis++;
+    var w=cv.clientWidth, h=cv.clientHeight, d=window.devicePixelRatio||1; if(cv.width!==Math.round(w*d)){ cv.width=Math.round(w*d); cv.height=Math.round(h*d); cv._f=null; }
+    var x=cv.getContext('2d'); x.setTransform(d,0,0,d,0,0); x.clearRect(0,0,w,h);
+    if(!cv._f){ cv._f=[]; for(var i=0;i<90;i++) cv._f.push({x:Math.random()*w,y:Math.random()*h,v:0.3+Math.random()*1.3,r:0.6+Math.random()*2.2,ph:Math.random()*6,hail:Math.random()<0.12,n:randInt(2,99)}); }
+    var t=NOW()/1000;
+    var ch=colChain(27), mx=9232; x.globalAlpha=0.22; x.strokeStyle='#9fd6ff'; x.lineWidth=1.5; x.beginPath();
+    for(var k=0;k<ch.length;k++){ var X=k/(ch.length-1)*w, Y=h-8-Math.log(ch[k])/Math.log(mx)*(h-20); if(k) x.lineTo(X,Y); else x.moveTo(X,Y); } x.stroke();
+    cv._f.forEach(function(f){ f.y+=f.v*(f.hail?2.2:1); f.x+=Math.sin(t*1.3+f.ph)*0.35; if(f.y>h+10){ f.y=-10; f.x=Math.random()*w; }
+      x.globalAlpha=f.hail?0.9:0.75; x.fillStyle=f.hail?'#e8f6ff':'#ffffff';
+      if(f.hail){ x.beginPath(); x.moveTo(f.x,f.y-6); x.lineTo(f.x+4,f.y); x.lineTo(f.x,f.y+6); x.lineTo(f.x-4,f.y); x.closePath(); x.fill(); x.font='700 8px JetBrains Mono,monospace'; x.fillText(String(f.n),f.x+6,f.y+3); }
+      else { x.beginPath(); x.arc(f.x,f.y,f.r,0,TAU); x.fill(); } });
+    x.globalAlpha=1;
+  });
+  snowRAF=vis?requestAnimationFrame(snowLoop):0;
+}
+var css=document.createElement('style');
+css.textContent='.hailcard{position:relative;overflow:hidden;min-height:200px;margin-top:14px;padding:22px 20px;border:2px solid #7fc8ff;cursor:pointer;color:#eaf6ff;background:linear-gradient(160deg,#06121f 0%,#0f2a44 55%,#1b4466 100%);box-shadow:0 0 0 1px #0a1a2a inset,0 0 26px rgba(127,200,255,.35);transition:transform .15s,box-shadow .15s;animation:hcPulse 2.4s ease-in-out infinite}'
+ +'.hailcard:hover{transform:translate(-3px,-3px);box-shadow:5px 5px 0 #7fc8ff,0 0 34px rgba(127,200,255,.55)}'
+ +'.hailcard.locked{cursor:not-allowed;filter:grayscale(.55) brightness(.8)}.hailcard.locked:hover{transform:none}'
+ +'.hailcard canvas.hc-snow{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}'
+ +'.hailcard .hc-body{position:relative;z-index:1}'
+ +'.hailcard .hc-warn{display:inline-block;font-size:11px;letter-spacing:.32em;color:#ff6b6b;border:1px solid #ff6b6b;padding:3px 8px;margin-bottom:10px;animation:hcBlink 1.1s steps(2) infinite}'
+ +'.hailcard .hc-title{font-size:clamp(24px,6vw,34px);font-weight:700;letter-spacing:.06em;text-shadow:0 0 14px rgba(160,220,255,.8)}'
+ +'.hailcard .hc-sub{font-size:12.5px;opacity:.85;margin:8px 0 14px;line-height:1.6}'
+ +'.hailcard .hc-stats{display:flex;flex-wrap:wrap;gap:6px}.hailcard .hc-stats span{font-size:11px;border:1px solid rgba(160,220,255,.6);padding:3px 8px;background:rgba(6,18,31,.55)}'
+ +'.hailcard .hc-tag{position:absolute;right:14px;top:14px;z-index:1;font-size:11px;border:1px solid #eaf6ff;padding:3px 8px;background:rgba(6,18,31,.6)}'
+ +'@keyframes hcPulse{0%,100%{border-color:#7fc8ff}50%{border-color:#ff8a8a}}@keyframes hcBlink{50%{opacity:.35}}'
+ +'.pickchip.tier-LL{border-width:3px;border-style:double;border-color:#7fc8ff;box-shadow:4px 4px 0 #7fc8ff;background:linear-gradient(135deg,rgba(127,200,255,.18),rgba(255,138,138,.12))}'
+ +'.lawnote{border:2px solid var(--ink);padding:10px 12px;margin:0 0 12px;font-size:12px;line-height:1.6}';
+document.head.appendChild(css);
+var _rmP=renderMenu;
+renderMenu=function(){
+  _rmP();
+  var list=document.getElementById('stageList'); if(!list) return;
+  var lc=list.children[LAW_IDX]; if(lc) lc.style.display='none';
+  var old=list.children[HAIL_IDX]; if(!old) return;
+  var lock=hailLocked(), cl=!!(meta.clearedStages&&meta.clearedStages[18]);
+  var card=document.createElement('div'); card.className='hailcard'+(lock?' locked':''); card.style.display=old.style.display;
+  card.innerHTML='<canvas class="hc-snow"></canvas><div class="hc-tag mono">'+(lock?'🔒 LOCKED':(cl?'✓ CLEAR':'⚠ START'))+'</div><div class="hc-body"><div class="hc-warn mono">⚠ DISASTER ALERT</div>'
+   +'<div class="hc-title">&lt;재난 발생 : 우박&gt;</div>'
+   +'<div class="hc-sub">콜라츠 추측 — 짝수는 반으로, 홀수는 3n+1 로 부풀어 쏟아지는 우박.<br>떨어지는 우박과 우박수 그래프를 피하며 「3n+1」의 문제를 풀어라.'+(lock?'<br><b>🔒 STAGE 15 「Ω · 궁극의 방정식」 클리어 시 해금</b>':'<br><b>※ 지금의 힘으로는 막을 수 없는 재난. 「진각성」이 필요하다.</b>')+'</div>'
+   +'<div class="hc-stats mono"><span>몬스터 7마리 → 보스</span><span>⬡ 육각형 · 5단계 보스</span><span>BOSS HP 142,857</span><span>3 PHASE</span><span>축소된 맵</span><span>REWARD · TIER LL</span></div></div>';
+  card.onclick=function(){ if(lock){ toast('🔒 STAGE 15 「Ω · 궁극의 방정식」을 클리어하면 열립니다.'); return; } selectedMode='story'; selectedStageIdx=HAIL_IDX; showScreen('loadout'); };
+  list.replaceChild(card,old);
+  if(!snowRAF) snowRAF=requestAnimationFrame(snowLoop);
+  var box=document.getElementById('adminMenuBox');
+  if(box&&isAdmin()&&!document.getElementById('admLawKey')){ var kb=document.createElement('button'); kb.id='admLawKey'; kb.className='btn ghost'; kb.style.cssText='padding:6px 12px;font-size:12px;'; kb.textContent='🔑 DLC2 키 변경 (현재: '+LAW_KEY+')';
+    kb.onclick=function(){ var nk=prompt('DLC 2 「4개의 법칙」 새 키 번호',LAW_KEY); if(nk===null||!nk.trim()) return; lawSave(nk.trim(),function(err){ alert(err?'이 기기에만 저장됨 — 서버 저장 실패: '+err:'모든 플레이어에게 적용되었습니다.'); renderMenu(); }); };
+    box.appendChild(kb); }
+};
+
+/* ---------- 20) 로드아웃: DLC2 안내 · 재난 경고 · 초각성 ---------- */
+var _rlP=renderLoadout;
+renderLoadout=function(){
+  _rlP();
+  var pg=document.getElementById('pickGrid'); if(!pg) return;
+  var st=(selectedMode==='story')?STAGES[selectedStageIdx]:null;
+  var note=document.getElementById('lawNote');
+  if(st&&(st.dlc2||st.hail)){
+    if(!note){ note=document.createElement('div'); note.id='lawNote'; note.className='lawnote mono'; pg.parentNode.insertBefore(note,pg); }
+    note.style.display='';
+    if(st.dlc2){ var s=lawState(), has=lawHasPass();
+      note.innerHTML='➗ <b>DLC 2 · 4개의 법칙</b><br>· 덧셈뺄셈 · 곱셈구구만 자동 장착 (각성 · 초각성 적용 / 다른 슬롯 · 궁극기 봉인)<br>· 보스 「÷」 HP 120,000 · 사칙연산의 땅: 보스에게 주는 피해 ×2<br>· 입장권: '+(has?'<b>보유 ✓</b> (게임을 시작하면 사용됨)':'<b>없음</b> — DLC 탭에서 100,000P 또는 키')+(s.cleared?'<br>· ✓ 클리어 '+(s.clears||1)+'회':''); }
+    else note.innerHTML='⚠ <b>재난 발생 : 우박</b><br>· 맵이 좁고 우박이 계속 떨어진다 · 몬스터 7마리 처치 후 보스 「3n+1」<br>· 보스는 <b>진각성</b>(추후 DLC) 이외의 피해를 99.7% 무효화하고 계속 재생한다.';
+  } else if(note) note.style.display='none';
+  var ag=document.getElementById('awakenGrid'); if(!ag) return;
+  var sg=document.getElementById('saGrid'); if(!sg){ sg=document.createElement('div'); sg.id='saGrid'; sg.style.marginTop='16px'; ag.insertAdjacentElement('afterend',sg); }
+  sg.innerHTML='<div class="mono" style="font-size:11px;margin-bottom:8px;color:var(--ink-soft)">✦✦ 초각성 — 각성 피해의 10배 · 훨씬 어려운 문제(시간 정지 · 20초) · 쿨타임 6초 — DLC 2 「4개의 법칙」 클리어 시 스킬마다 50%</div>';
+  var grid=document.createElement('div'); grid.className='pickgrid'; sg.appendChild(grid);
+  ['add','mul'].forEach(function(id){ var sk=skillById(id), own=saOwned(id), rd=saReady(id), on=saActive(id);
+    var chip=document.createElement('div'); chip.className='pickchip tier-LL'+(own?'':' used');
+    chip.innerHTML='<div class="pc-t">'+(own?(rd?(on?'초각성 · ON ✦✦':'초각성 · OFF'):'각성 + Lv.6 필요'):'🔒 미획득')+'</div>'+(own?'✦✦ ':'')+sk.name+'<div style="font-size:10px;opacity:.75;margin-top:4px;font-weight:400">'+(id==='add'?'「수직선 붕괴」 네 자리 이동 → 거대 수직선 위를 도약하며 폭격':'「곱셈 격자 폭풍」 큰 수 곱셈 → 격자 포대 일제사격 + X 광선')+'</div>';
+    if(on) chip.style.outline='2px solid var(--ink)';
+    chip.onclick=function(){ if(!own||!rd) return; meta.saOn=meta.saOn||{}; meta.saOn[id]=!on; saveMeta(); renderLoadout(); };
+    grid.appendChild(chip); });
+};
+
+/* ---------- 21) 로비 배경: 우박수(콜라츠) 그래프 ---------- */
+var LG={n:27,ch:null,i:0,t:0,hold:0};
+function lgNew(){ var c=[27,97,871,703,231,447,639,155,73,91,111,6171]; LG.n=Math.random()<0.6?pick(c):randInt(30,999); LG.ch=colChain(LG.n); LG.i=0; LG.t=0; LG.hold=0; }
+var _llP=lobbyLoop;
+lobbyLoop=function(){
+  _llP();
+  try{
+    var cv=document.getElementById('lobbyBg'); if(!cv||!lobbyActive()) return; var x=cv.getContext('2d'), w=cv.width, h=cv.height;
+    if(!LG.ch) lgNew();
+    var L=LG.ch.length-1, mx=colMax(LG.ch), sp=Math.max(1,L/170);
+    if(LG.i<L){ LG.t+=sp; LG.i=Math.min(L,Math.floor(LG.t)); } else { LG.hold++; if(LG.hold>200) lgNew(); }
+    var ink=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#111', M=Math.max(24,w*0.06), gx=M, gy=h*0.16, gw=w-2*M, gh=h*0.68;
+    x.save(); x.globalAlpha=0.16; x.strokeStyle=ink; x.lineWidth=1;
+    x.beginPath(); x.moveTo(gx,gy+gh); x.lineTo(gx+gw,gy+gh); x.moveTo(gx,gy); x.lineTo(gx,gy+gh); x.stroke();
+    x.globalAlpha=0.22; x.lineWidth=2; x.beginPath();
+    for(var k=0;k<=LG.i;k++){ var X=gx+k/L*gw, Y=gy+gh-(LG.ch[k]/mx)*gh; if(k) x.lineTo(X,Y); else x.moveTo(X,Y); } x.stroke();
+    var lx=gx+LG.i/L*gw, ly=gy+gh-(LG.ch[LG.i]/mx)*gh; x.globalAlpha=0.5; x.fillStyle=ink; x.beginPath(); x.arc(lx,ly,4,0,TAU); x.fill();
+    x.font='12px JetBrains Mono,monospace'; x.textAlign='left'; x.globalAlpha=0.4;
+    x.fillText('우박수 그래프 · n = '+LG.n+'   step '+LG.i+' / '+L+'   max '+mx,gx+6,gy-8);
+    x.textAlign='center'; x.fillText(String(LG.ch[LG.i]),lx,ly-10);
+    x.restore();
+  }catch(e){}
+};
+})();
 
 })();
 
@@ -5039,6 +5691,111 @@ var _sfE=endRun; endRun=function(win){ if(G&&G.running) SFX.play(win?'win':'lose
 var _sfU=update; update=function(dt){ var hp=(G&&G.player)?G.player.hp:0; _sfU(dt); if(G&&G.player&&G.player.hp<hp-0.5) SFX.play('hit'); };
 window.__sfx=SFX;
 (function(){ var c=document.getElementById('setSfx'); if(!c) return; c.checked=SFX.isOn(); c.addEventListener('change',function(){ SFX.set(c.checked); }); })();
+
+
+/* ===================== EXT-Ψ2: DLC 2 카드/입장 · 개발자의 가호(쿠폰 gaho) · Enter 로그인 · 테마 · 비밀 쿠폰 ===================== */
+(function(){
+  var L=window.__dlc2, toast=window.__eclToast||function(t){ alert(t); };
+  /* ---- 개발자의 가호 ---- */
+  BLESSINGS.gaho={ name:'개발자의 가호', icon:'🛠',
+    desc:'몬스터를 처치할 때 5% 확률로 처치 포인트를 2배로 획득합니다.',
+    lock:'쿠폰 코드로 얻을 수 있어요.',
+    unlocked:function(){ return isAdmin()||!!(meta&&meta.gaho); } };
+  var _adcG=anyDlcCleared; anyDlcCleared=function(){ return _adcG()||!!(meta&&meta.gaho); };
+  var _deG=damageEnemy;
+  damageEnemy=function(e,dmg){
+    var was=!!(e&&e.dead); _deG(e,dmg);
+    if(e&&!was&&e.dead&&G&&G.blessing==='gaho'&&Math.random()<0.05){
+      var val=e.type==='point'?4:e.type==='segment'?7:e.type==='boss'?60:12; if(e.elite) val*=3; val=Math.max(1,Math.round(val*endlessMult()));
+      meta.currency+=val; G.earned+=val; spawnFloat(e.x,e.y-26,'🛠 개발자의 가호 ×2 (+'+val+'P)');
+    }
+  };
+  function gahoRedeem(){
+    var inp=document.getElementById('cpIn'), msg=document.getElementById('cpMsg'); if(!inp||inp.value.trim().toLowerCase()!=='gaho') return false;
+    if(meta.gaho){ msg.style.color='#d32f2f'; msg.textContent='이미 사용한 쿠폰입니다.'; return true; }
+    meta.gaho=true; if(!meta.blessing) meta.blessing='gaho'; saveMeta();
+    msg.style.color=''; msg.textContent='✅ 「🛠 개발자의 가호」를 얻었습니다! 출전 화면의 「가호」에서 선택하세요.'; inp.value=''; return true;
+  }
+  document.addEventListener('click',function(e){ if(e.target&&e.target.id==='cpOk'&&gahoRedeem()){ e.stopImmediatePropagation(); e.preventDefault(); } },true);
+  window.addEventListener('keydown',function(e){ if(e.target&&e.target.id==='cpIn'&&e.key==='Enter'&&gahoRedeem()){ e.stopImmediatePropagation(); e.preventDefault(); } },true);
+
+  /* ---- Enter 로 로그인 ---- */
+  var aid=document.getElementById('authId'), apw=document.getElementById('authPw');
+  if(aid) aid.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); if(apw&&!apw.value) apw.focus(); else document.getElementById('loginBtn').click(); } });
+  if(apw) apw.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); document.getElementById('loginBtn').click(); } });
+
+  /* ---- 테마 (시스템 / 라이트 / 다크) ---- */
+  var TK='eclipsilon_theme';
+  function getT(){ try{ return localStorage.getItem(TK)||'system'; }catch(e){ return 'system'; } }
+  function applyT(t){ var r=document.documentElement; if(t==='light'||t==='dark') r.setAttribute('data-theme',t); else r.removeAttribute('data-theme'); }
+  applyT(getT());
+  var SK='eclipsilon_secret_coupon';
+  function getS(){ try{ return localStorage.getItem(SK)==='1'; }catch(e){ return false; } }
+  var setScr=document.getElementById('screen-settings'), wrap=setScr&&setScr.querySelector('.wrap'), padRow=document.getElementById('setPad');
+  if(wrap&&padRow){
+    var row=document.createElement('div'); row.className='setrow'; row.id='themeRow';
+    row.innerHTML='<span>🌓 화면 테마</span><span style="margin-left:auto;display:flex;gap:6px" id="themeBtns"></span>';
+    padRow.closest('.setrow').insertAdjacentElement('afterend',row);
+    var tb=row.querySelector('#themeBtns');
+    [['system','시스템'],['light','☀ 라이트'],['dark','🌙 다크']].forEach(function(o){
+      var b=document.createElement('button'); b.textContent=o[1]; b.setAttribute('data-t',o[0]); b.style.cssText='min-width:0;padding:6px 10px;margin:0';
+      b.onclick=function(){ try{ localStorage.setItem(TK,o[0]); }catch(e){} applyT(o[0]); paintT(); };
+      tb.appendChild(b); });
+    function paintT(){ var t=getT(); Array.prototype.forEach.call(tb.children,function(b){ var on=b.getAttribute('data-t')===t; b.style.background=on?'var(--ink)':'transparent'; b.style.color=on?'var(--bg)':'var(--ink)'; }); }
+    paintT();
+    var sr=document.createElement('label'); sr.className='setrow'; sr.style.cssText='opacity:.35;font-size:11px;border-bottom:none;margin-top:18px';
+    sr.innerHTML='<input type="checkbox" id="setSecret"> 비밀 쿠폰 코드 보이기 <span id="secretCode" class="mono" style="margin-left:8px;font-weight:700"></span>';
+    wrap.appendChild(sr);
+    var sc=document.getElementById('setSecret'), sct=document.getElementById('secretCode');
+    function paintS(){ var on=getS(); sc.checked=on; sct.textContent=on?'쿠폰코드:gaho':''; sr.style.opacity=on?'.9':'.35'; }
+    sc.addEventListener('change',function(){ try{ localStorage.setItem(SK,sc.checked?'1':'0'); }catch(e){} paintS(); });
+    paintS();
+  }
+
+  /* ---- DLC 2 · 4개의 법칙 : DLC 탭 카드 + 입장 ---- */
+  if(!L) return;
+  var gt=document.createElement('div'); gt.id='lawGate';
+  gt.style.cssText='display:none;position:fixed;left:0;top:0;right:0;bottom:0;z-index:99990;background:rgba(0,0,0,.6);align-items:center;justify-content:center';
+  gt.innerHTML='<div class="gocard" style="width:min(360px,90vw);background:var(--bg);text-align:left"><div class="mono" style="font-size:11px;opacity:.7">DLC 2 · ARITHMETIC</div><div style="font-weight:700;font-size:18px;margin:4px 0 10px">➗ 4개의 법칙 — 입장</div>'
+   +'<div style="font-size:12.5px;line-height:1.6;opacity:.85;margin-bottom:12px">키 번호를 입력하거나 <b>100,000P</b>를 내고 입장권을 얻으세요. 입장권은 게임을 시작할 때 사용되며, 죽거나 클리어하면 다시 필요합니다.</div>'
+   +'<input id="lawKey" class="authinput" type="text" data-nokp="1" autocomplete="off" autocapitalize="off" placeholder="KEY"><button class="btn" id="lawKeyOk" style="margin-bottom:8px">🔑 키로 입장</button>'
+   +'<button class="btn" id="lawPay" style="margin-bottom:8px"></button><div class="mono" id="lawMsg" style="min-height:1.4em;font-size:12px;color:#d32f2f;margin-bottom:8px"></div><button class="btn ghost" id="lawNo">취소</button></div>';
+  document.body.appendChild(gt);
+  ['keydown','keyup'].forEach(function(t){ gt.addEventListener(t,function(e){ e.stopPropagation(); }); });
+  function go(){ gt.style.display='none'; selectedMode='story'; selectedStageIdx=L.idx; showScreen('loadout'); }
+  function grant(){ L.state().pass=true; saveMeta(); }
+  function openGate(){
+    if(L.hasPass()){ go(); return; }
+    L.load(function(){});
+    document.getElementById('lawKey').value=''; document.getElementById('lawMsg').textContent='';
+    var pb=document.getElementById('lawPay'); pb.textContent='💰 100,000P 내고 입장 (보유 '+Math.floor(meta.currency).toLocaleString()+'P)'; pb.disabled=meta.currency<L.price;
+    gt.style.display='flex'; setTimeout(function(){ document.getElementById('lawKey').focus(); },50);
+  }
+  function keyOk(){ L.load(function(){ if(document.getElementById('lawKey').value.trim()===L.key()){ grant(); go(); } else document.getElementById('lawMsg').textContent='키 번호가 올바르지 않습니다.'; }); }
+  document.getElementById('lawKeyOk').addEventListener('click',keyOk);
+  document.getElementById('lawKey').addEventListener('keydown',function(e){ if(e.key==='Enter') keyOk(); if(e.key==='Escape') gt.style.display='none'; });
+  document.getElementById('lawPay').addEventListener('click',function(){
+    if(meta.currency<L.price){ document.getElementById('lawMsg').textContent='포인트가 부족합니다.'; return; }
+    if(!confirm('100,000P를 내고 「4개의 법칙」 입장권을 얻을까요?')) return;
+    meta.currency-=L.price; grant(); go(); });
+  document.getElementById('lawNo').addEventListener('click',function(){ gt.style.display='none'; });
+  var css=document.createElement('style');
+  css.textContent='.lawcard{position:relative;overflow:hidden;margin:12px 0 16px;padding:18px 18px;border:2px solid var(--ink);cursor:pointer;background:var(--card-bg)}'
+   +'.lawcard:hover{transform:translate(-3px,-3px);box-shadow:4px 4px 0 var(--ink)}.lawcard{transition:transform .14s,box-shadow .14s}'
+   +'.lawcard .lw-ops{position:absolute;right:12px;top:8px;font-size:40px;font-weight:700;letter-spacing:.1em;opacity:.12;font-family:"JetBrains Mono",monospace}';
+  document.head.appendChild(css);
+  var _rmL=renderMenu;
+  renderMenu=function(){
+    _rmL();
+    var box=document.getElementById('dlcList'); if(!box||box.style.display==='none') return;
+    var s=L.state(), has=L.hasPass(), sa=meta.superAwake||{};
+    var c=document.createElement('div'); c.className='lawcard';
+    c.innerHTML='<div class="lw-ops">+ − × ÷</div><div class="mono" style="font-size:11px;opacity:.7">DLC 2 · ARITHMETIC</div><div style="font-size:17px;font-weight:700;margin:4px 0">➗ 4개의 법칙</div>'
+     +'<div style="font-size:12px;opacity:.8;line-height:1.6">사칙연산의 마지막 기호, 보스 「÷」 (HP 120,000). 덧셈뺄셈 · 곱셈구구만 사용 가능 (각성 OK). 20마리 처치 후 보스전 · 나눗셈 BOSS QUIZ (15초 간격 · 10초 풀이 · 0으로 나누기 주의).<br>클리어 보상 : <b>50,000P</b> + 덧셈뺄셈 · 곱셈구구 각각 <b>50% 초각성</b></div>'
+     +'<div class="mono" style="font-size:11.5px;margin-top:8px">'+(has?'🎟 입장권 보유 — 눌러서 출전':'🔒 입장 : 🔑 키 번호 또는 💰 100,000P')+(s.cleared?' · ✓ 클리어 '+(s.clears||1)+'회':'')+(sa.add?' · ✦✦ 덧셈뺄셈':'')+(sa.mul?' · ✦✦ 곱셈구구':'')+'</div>';
+    c.onclick=openGate; box.appendChild(c);
+  };
+})();
 
 showScreen('lobby');
 
