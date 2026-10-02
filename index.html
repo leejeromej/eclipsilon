@@ -2170,7 +2170,7 @@ spawnBoss=function(){
   var b=G.boss; if(!b||!b.bossType) return;
   var L={complex:'e^(iπ)',zeta:'ζ(s)',sigma:'Σ',epsilon:'ε'}[b.bossType]; if(!L) return;
   b.label=L; document.getElementById('bossName').textContent=G.stage.name+' · 보스 「'+L+'」';
-  if(b.bossType==='complex'){ b.maxHp=b.hp=(G.mode==='endless'?5:12); b.phase=1; b.spd=48; G.cx=null; cx(); spawnFloat(b.x,b.y-100,'TMI: i는 e ≈ 2.71초 간격으로 나타난다'); }
+  if(b.bossType==='complex'){ b.maxHp=b.hp=(G.mode==='endless'?5:12); b.phase=1; b.spd=48; if(G.mode==='endless') b.complexLife=60000; G.cx=null; cx(); spawnFloat(b.x,b.y-100,'TMI: i는 e ≈ 2.71초 간격으로 나타난다'); }
   if(b.bossType==='epsilon') b.spd=70;
 };
 function toPhase2(b){
@@ -2234,7 +2234,14 @@ function ext(dt){
   // ζ 나선
   if(c.spiral && isBT('zeta')){ var s=c.spiral; s.t-=dtms;
     if(s.t<=0){ s.t=65; s.a+=0.33; s.left--; for(var k=0;k<s.arms;k++) bb(G.boss.x,G.boss.y,s.a+k*TAU/s.arms,205,G.boss.dmg*0.42,6); if(s.left<=0) c.spiral=null; } }
-  // 복소평면 보스
+  // 복소평면 보스: 무한 모드에서는 각 보스가 제한 시간 종료 시 퇴장
+  if(G.mode==='endless'){
+    var expiredComplexes=[];
+    G.enemies.forEach(function(ce){ if(ce.type==='boss' && ce.bossType==='complex' && !ce.dead && ce.complexLife!==undefined){
+      ce.complexLife-=dtms; if(ce.complexLife<=0){ ce.dead=true; expiredComplexes.push(ce); spawnFloat(ce.x,ce.y-48,'복소평면 보스 퇴장 — 제한 시간 종료'); }
+    }});
+    if(expiredComplexes.length){ G.enemies=G.enemies.filter(function(e){return expiredComplexes.indexOf(e)<0;}); G.projectiles=G.projectiles.filter(function(pr){return pr.kind!=='bossbolt';}); if(expiredComplexes.indexOf(G.boss)>=0){ G.boss=null; document.getElementById('bossHud').classList.remove('show'); } }
+  }
   if(isBT('complex')){
     var b=G.boss; if(c.grace>0) c.grace-=dtms;
     if(b.phase===1){
@@ -2766,7 +2773,7 @@ update=function(dt){
   if(G && G.running && G.mode==='endless'){
     if(G.endlessBossTimer===undefined) G.endlessBossTimer=ENDLESS_CFG.bossFirst;
     G.endlessBossTimer -= dt*1000;
-    if(G.endlessBossTimer<=0 && ENDLESS_BOSSES.length){
+    if(G.endlessBossTimer<=0 && ENDLESS_BOSSES.length && !((G.hiddenBoss&&!G.hiddenBoss.dead)||(G.hiddenBoss2&&!G.hiddenBoss2.dead))){
       // 기존 보스는 전장에 남기고, 새 보스를 추가로 난입시킨다.
       if(G.boss && !G.boss.dead){
         var oldBoss=G.boss;
@@ -2859,7 +2866,7 @@ var _up5=update;
 update=function(dt){
   if(G && G.running && G.mode==='endless'){
     if(G.hiddenAt===undefined) G.hiddenAt=300000;
-    if(G.elapsed>=G.hiddenAt){ huskify(G.boss);
+    if(G.elapsed>=G.hiddenAt){ G.enemies=G.enemies.filter(function(e){return e.type!=='boss';}); G.projectiles=G.projectiles.filter(function(pr){return pr.kind!=='bossbolt';}); G.boss=null;
       var mn=Math.min(2.2, 1+(G.elapsed/1000)/500);
       G.stage={id:-2, name:'???', types:['point','segment','polygon'], diffMult:1, killQuota:9999, bossType:'godel', bossHpMult:9*mn, bossDmgMult:1.5};
       spawnBoss();
@@ -3680,7 +3687,7 @@ var _upChai=update;
 update=function(dt){
   if(G && G.running && G.mode==='endless'){
     if(G.hiddenAt2===undefined) G.hiddenAt2=480000;
-    if(G.elapsed>=G.hiddenAt2){ huskify(G.boss);
+    if(G.elapsed>=G.hiddenAt2){ G.enemies=G.enemies.filter(function(e){return e.type!=='boss';}); G.projectiles=G.projectiles.filter(function(pr){return pr.kind!=='bossbolt';}); G.boss=null;
       var mn=Math.min(2.6, 1+(G.elapsed/1000)/450);
       G.stage={id:-3,name:'???',types:['point','segment','polygon'],diffMult:1,killQuota:9999,bossType:'chaitin',bossHpMult:14*mn,bossDmgMult:1.8};
       spawnBoss();
@@ -4652,6 +4659,21 @@ renderLoadout=function(){
     if(on) chip.style.outline='2px solid var(--ink)';
     chip.onclick=function(){ if(!own||!rd) return; meta.saOn=meta.saOn||{}; meta.saOn[id]=!on; saveMeta(); renderLoadout(); };
     grid.appendChild(chip); });
+  /* 초각성 ON/OFF 창에서도 난이도 변경 가능 — 도감 기능과 동일한 saEasy 설정 공유 */
+  var easyBox=document.createElement('div'); easyBox.className='tiergroup'; easyBox.style.marginTop='12px';
+  easyBox.innerHTML='<div class="tlabel">✦✦ 초각성 문제 난이도 (스킬당 '+SA_EASY_PRICE.toLocaleString()+'P)</div><div class="mono" style="font-size:11px;opacity:.75;margin:0 0 8px">구매한 난이도 설정은 스킬 도감과 공유됩니다.</div>';
+  ['add','mul'].filter(saOwned).forEach(function(id){
+    var sk=skillById(id), has=saEasy(id);
+    var row=document.createElement('div'); row.className='skillrow';
+    row.innerHTML='<div><div class="sname">✦✦ '+sk.name+' · '+SA[id].name+'</div><div class="sdesc">'+(id==='add'?'세 자리 수 이동 → 두 자리 수 이동':'큰 수 곱셈 → 두·세 자리×한 자리 또는 깔끔한 합차(a²−b²)')+'</div></div>';
+    var bt=document.createElement('button'); bt.className='btn'; bt.style.width='auto'; bt.style.padding='8px 12px';
+    bt.textContent=has?'구매 완료 ✓':'쉬운 문제 (−'+SA_EASY_PRICE.toLocaleString()+'P)'; bt.disabled=has;
+    bt.onclick=function(){ if(!isAdmin()&&meta.currency<SA_EASY_PRICE){ toast('포인트가 부족합니다. (필요 '+SA_EASY_PRICE.toLocaleString()+'P)'); return; }
+      if(!confirm('「'+sk.name+'」 초각성 문제를 쉬운 난이도로 바꿀까요? ('+SA_EASY_PRICE.toLocaleString()+'P)')) return;
+      if(!isAdmin()) meta.currency-=SA_EASY_PRICE; meta.saEasy=meta.saEasy||{}; meta.saEasy[id]=true; saveMeta(); renderLoadout(); };
+    row.appendChild(bt); easyBox.appendChild(row);
+  });
+  sg.appendChild(easyBox);
 };
 
 /* ---------- 21) 로비: 트레일러 보기 ---------- */
