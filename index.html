@@ -308,6 +308,7 @@ button{font-family:inherit;}
       <div class="lobby-sub">이클립실론 — 수식의 어둠 속에서, 개념을 무기로 살아남아라</div>
       <button class="btn lobby-start" id="lobbyStart">시작하기 ▶</button>
       <button class="btn ghost" id="gotoSettings" style="margin-top:10px;min-width:230px;">⚙ 설정</button>
+      <button class="btn ghost" id="lobbyTrailer" style="margin-top:10px;min-width:230px;">▶ 트레일러 보기</button>
       <div class="mono" id="lobbyStats"></div>
       <div class="lobby-tip mono" id="lobbyTip"></div>
       <div class="lobby-credit mono">제작 및 문의 · <b>@2m.nze</b></div>
@@ -2825,6 +2826,7 @@ challengeSubmit=function(){
 function openGodelQuiz(){
   var c=godelGen(), tm=9500;
   G.challenge={isBossQuiz:true,isGodel:true,q:c.q,a:c.a,buf:'',timeLeft:tm,timeMax:tm};
+  G.freeze=true;   /* 히든 보스 문제: 풀이 중 게임 정지 */
   document.getElementById('freezeBanner').style.display='none';
   document.getElementById('chTitle').textContent='BOSS QUIZ · 괴델의 문장 — 증명하면 7초간 무방비';
   document.getElementById('chQ').innerHTML=challengeQuestionHTML(c.q);
@@ -3960,7 +3962,13 @@ function adminHit(v){
 }
 function adminSkipBoss(){
   if(!G||!G.running) return;
-  if(G.mode!=='story'){ spawnFloat(G.player.x,G.player.y-50,'스토리 모드에서만 사용 가능'); return; }
+  if(G.mode==='endless'){
+    var cb0=G.boss; if(cb0&&!cb0.dead&&(cb0.godel||cb0.chai)){ spawnFloat(G.player.x,G.player.y-50,'이미 히든 보스전'); return; }
+    var t1=(G.hiddenAt===undefined?300000:G.hiddenAt), t2=(G.hiddenAt2===undefined?480000:G.hiddenAt2), tt=Math.min(t1,t2);
+    G.elapsed=Math.max(G.elapsed,tt);
+    spawnFloat(G.player.x,G.player.y-50,'히든 보스로 스킵 ('+(tt===t1?'5분 · G':'8분 · Ω′')+')'); return;
+  }
+  if(G.mode!=='story'){ spawnFloat(G.player.x,G.player.y-50,'사용할 수 없는 모드'); return; }
   if(G.phase==='boss'){ spawnFloat(G.player.x,G.player.y-50,'이미 보스전'); return; }
   G.kills=Math.max(G.kills,G.stage.killQuota); spawnFloat(G.player.x,G.player.y-50,'보스전으로 스킵');
 }
@@ -3972,7 +3980,7 @@ function refreshAdminUI(){
     pn.style.cssText='position:fixed;left:10px;top:74px;z-index:40;background:var(--bg,#fff);border:2px solid var(--ink);padding:8px;font-size:11px;display:flex;flex-direction:column;gap:6px;width:170px;';
     pn.innerHTML='<b>🛡 ADMIN</b><button class="btn" id="admGod" style="padding:4px 8px;font-size:11px"></button>'+
       '<div style="display:flex;gap:4px"><input id="admDmg" type="number" min="1" value="1000" style="width:90px;border:1px solid var(--ink);padding:3px;font-family:inherit;background:transparent;color:inherit"><button class="btn" id="admHit" style="padding:4px 6px;font-size:11px">피해 주기</button></div>'+
-      '<button class="btn" id="admSkip" style="padding:4px 8px;font-size:11px">보스전 스킵</button>';
+      '<button class="btn" id="admSkip" style="padding:4px 8px;font-size:11px">보스전 / 히든 스킵</button>';
     document.body.appendChild(pn);
     ['keydown','keyup'].forEach(function(t){ pn.addEventListener(t,function(e){ e.stopPropagation(); }); });
     document.getElementById('admGod').onclick=function(){ setAdminGod(!adminGod()); };
@@ -4035,7 +4043,7 @@ var LAW_STORY={
  end:['÷ : …나머지 0. 깔끔하게 나누어떨어졌군.','÷ : 기억해라. 0으로 나누는 순간, 모든 법칙은 정의되지 않는다.','네 개의 법칙이 하나로 묶이며, 덧셈과 곱셈이 처음 보는 빛으로 떨리기 시작한다…']
 };
 var HAIL_STORY={
- intro:['⚠ 재난 경보 — 하늘에서 숫자가 쏟아진다.','짝수는 반으로 쪼개지고, 홀수는 세 배로 부풀어 다시 떨어진다. 사람들은 그것을 「우박수」라 불렀다.','3n+1 : 나는 아직 아무도 증명하지 못한 추측. 모든 수는 결국 1로 떨어진다고들 하지.','3n+1 : 하지만 그 길이 얼마나 높이 솟구치는지, 너는 계산할 수 있는가?','(경고: 이 재난은 지금의 힘으로는 막을 수 없다. 어딘가의 「진각성」만이 우박을 멈출 수 있다고 한다.)'],
+ intro:['⚠ 재난 경보 — 하늘에서 숫자가 쏟아진다.','짝수는 반으로 쪼개지고, 홀수는 세 배로 부풀어 다시 떨어진다. 사람들은 그것을 「우박수」라 불렀다.','3n+1 : 나는 아직 아무도 증명하지 못한 추측. 모든 수는 결국 1로 떨어진다고들 하지.','3n+1 : 하지만 그 길이 얼마나 높이 솟구치는지, 너는 계산할 수 있는가?','(경고: 이 재난은 지금의 힘으로는 막을 수 없다. 어딘가의 「초각성」만이 우박을 멈출 수 있다고 한다.)'],
  p2:['3n+1 : 27 은 111번을 오르내리며 9232 까지 솟는다. 너의 몸도 그렇게 흔들릴 것이다.','(그래프가 세로로도 내려온다. 우박이 두 배로 쏟아진다.)'],
  p3:['3n+1 : 4 → 2 → 1 → 4 → 2 → 1 … 끝난 줄 알았나? 이것이 영원한 고리다.','(세 줄기 4·2·1 고리가 회전한다. 모든 패턴이 최대 속도로 몰아친다.)'],
  end:['3n+1 : …1. 모든 수는 결국 1로 떨어진다.','3n+1 : 증명은 아직이다. 하지만 너는 적어도 하나의 반례도 남기지 않았다.','하늘이 맑아진다. 손바닥 위에 아직 녹지 않은 우박 하나가 숫자를 품고 반짝인다.']
@@ -4043,9 +4051,10 @@ var HAIL_STORY={
 
 /* ---------- 3) 스테이지 ---------- */
 STAGES.push(
- {id:18,name:'재난 발생 : 우박',special:'DISASTER',hail:true,desc:'보스 「3n+1」 3페이즈 — 콜라츠 추측. 우박과 우박수 그래프를 피하며 BOSS QUIZ까지. 몬스터 7마리 처치 후 보스전 · 축소된 맵. 클리어 시 TIER LL 「우박수 룰렛」',killQuota:7,types:['polygon'],diffMult:6.5,bossHpMult:1,bossDmgMult:2.6,bossType:'hail',rewardSkill:'collatz',bonusP:142857,storyEnd:HAIL_STORY.end},
- {id:19,name:'4개의 법칙',special:'DLC 2',dlc2:true,desc:'DLC 2 · 사칙연산 — 덧셈뺄셈 · 곱셈구구만 사용 가능(각성 OK). 20마리 처치 후 보스 「÷」 (HP 120,000). 클리어 시 초각성 기회',killQuota:20,types:['point','segment','polygon'],diffMult:1.7,bossHpMult:1,bossDmgMult:1.5,bossType:'divider',storyEnd:LAW_STORY.end}
+ {id:18,name:'재난 발생 : 우박',special:'DISASTER',hail:true,desc:'하늘에서 숫자가 쏟아진다.',killQuota:7,types:['polygon'],diffMult:6.5,bossHpMult:1,bossDmgMult:2.6,bossType:'hail',rewardSkill:'collatz',bonusP:142857,storyEnd:HAIL_STORY.end},
+ {id:19,name:'4개의 법칙',special:'DLC 2',dlc2:true,desc:'DLC 2',killQuota:20,types:['point','segment','polygon'],diffMult:1.7,bossHpMult:1,bossDmgMult:1.5,bossType:'divider',storyEnd:LAW_STORY.end}
 );
+var HAIL_REGEN=0.0025; /* 우박 보스 초당 재생(최대체력 비율) — 초각성 없이는 사실상 못 잡도록 하는 밸런스 값 */
 var HAIL_IDX=STAGES.length-2, LAW_IDX=STAGES.length-1, HAIL_HP=142857, LAW_HP=120000, LAW_HARD=40000, LAW_PRICE=100000;
 var _stlP=stLabel; stLabel=function(i){ var s=STAGES[i]; return (s&&s.special)?s.special:_stlP(i); };
 BOSS_QUIZ_CONCEPTS.divider=[{n:'나눗셈 (세·네 자리 ÷ 한·두 자리)',f:'몫이 정수로 떨어진다. 예) 1872 ÷ 24 = 78 · 0으로 나누는 문제는 정의되지 않으므로 무조건 오답 처리된다'}];
@@ -4156,15 +4165,13 @@ damageEnemy=function(e,dmg){
     if(e.bossType==='divider'){ dmg*=2; }
     if(e.bossType==='hail'){
       var h=G.cx&&G.cx.hl; if(h&&h.trans>0) return;
-      if(trueOpen()){ if(h) h.lastTrue=NOW(); }
-      else { dmg*=0.003; if(h&&NOW()>h.msgT){ h.msgT=NOW()+2600; spawnFloat(e.x,e.y-80,'❄ 진각성 없이는 우박이 멈추지 않는다 (피해 0.3%)'); } }
       if(h&&h.ph<2){ var floor=e.maxHp*(2-h.ph)/3; if(e.hp-dmg<floor+0.5) dmg=Math.max(0,e.hp-floor-0.5); }
     }
   }
   _dmP(e,dmg);
 };
 
-/* ---------- 10) 진각성 · TIER LL 발동 후킹 / 우박수 룰렛 ---------- */
+/* ---------- 10) 초각성 · TIER LL 발동 후킹 / 우박수 룰렛 ---------- */
 SKILL_POOL.push({id:'collatz',tier:'LL',secret:true,name:'우박수 룰렛',desc:'룰렛이 멈춘 수 n 의 우박수열이 1 에 닿을 때까지 우박이 쏟아진다 — 체인 길이에 비례한 피해.',
   study:'콜라츠 추측: 짝수면 2로 나누고, 홀수면 3을 곱하고 1을 더한다. 어떤 자연수에서 시작해도 결국 1에 도달한다고 추측되지만 아직 증명되지 않았다.\n예) 27 은 111번 만에 1 이 되며 도중에 9232 까지 솟는다. 체인이 길수록(= 1까지 오래 걸릴수록) 이 스킬의 피해가 커진다.',
   kind:'collatz',baseDmg:120,cd:30000,win:13000,pause:true,gen:function(){ return collatzQuiz(1); }});
@@ -4328,6 +4335,7 @@ cancelChallenge=function(){
 function openBQ(flag,title,q,a,T,extra){
   G.challenge={isBossQuiz:true,q:q,a:a,buf:'',timeLeft:T,timeMax:T}; G.challenge[flag]=true; if(extra) for(var k in extra) G.challenge[k]=extra[k];
   document.getElementById('freezeBanner').style.display='none'; setQ(title,q);
+  if(flag==='isHail') G.freeze=true;   /* 우박 보스 문제: 풀이 중 게임 정지 */
   var el=document.getElementById('challenge'); el.classList.add('show'); el.classList.add('bossquiz'); renderPad();
 }
 function divQuiz(zero){
@@ -4410,7 +4418,7 @@ function psiTick(dt){
       else {
         if(h.ph<2&&b.hp<=b.maxHp*(2-h.ph)/3+0.6){ hailPhase(b,h); return; }
         var P=HP_CFG[h.ph];
-        if(NOW()-h.lastTrue>1500){ var ceil=b.maxHp*(3-h.ph)/3; b.hp=Math.min(ceil,b.hp+b.maxHp*0.004*dt); }
+        var ceil=b.maxHp*(3-h.ph)/3; b.hp=Math.min(ceil,b.hp+b.maxHp*HAIL_REGEN*dt);
         if(h.calm>0) h.calm-=dtms;
         h.hailT-=dtms;
         if(h.hailT<=0){ h.hailT=P.hail*(h.calm>0?3:1); for(i=0;i<P.hn;i++){ var aim=(h.ph>=1&&i===0&&Math.random()<0.5), q3=aim?{x:p.x+p.vx*0.5,y:p.y+p.vy*0.5}:nearP(0,380); addHail(q3.x,q3.y,h.ph===2?780:900,P.dmg); } }
@@ -4488,8 +4496,7 @@ function drawPsi(){
         ctx.fillStyle=ink; ctx.font='700 13px JetBrains Mono,monospace';
         var stt=''; for(i=0;i<3;i++) stt+=(i<h.ph?'■':i===h.ph?'◆':'□')+' ';
         ctx.fillText(stt+' PHASE '+(h.ph+1)+' · '+['우박의 시작','폭주하는 우박','4 → 2 → 1'][h.ph]+(h.trans>0?'  (전환 중)':''),VW/2,74);
-        var open=NOW()-h.lastTrue<1500; ctx.fillStyle=open?hue(130):hue(0);
-        ctx.fillText(open?'✦ 진각성 — 우박이 멈춘다':'❄ 진각성 없음 — 받는 피해 0.3% · 초당 '+fmtN(b.maxHp*0.004)+' 재생',VW/2,94); }
+      }
     }
     G.enemies.forEach(function(e){ if(!e.mini||e.dead) return; var q=SC(e.x,e.y,cm); ctx.fillStyle=ink; ctx.font='700 16px JetBrains Mono,monospace'; ctx.fillText('5',q.x,q.y+6);
       var bw=e.r*2.4; ctx.fillStyle='rgba(128,128,128,.35)'; ctx.fillRect(q.x-bw/2,q.y-e.r-14,bw,5); ctx.fillStyle=hue(0); ctx.fillRect(q.x-bw/2,q.y-e.r-14,bw*Math.max(0,e.hp/e.maxHp),5); });
@@ -4530,18 +4537,14 @@ endRun=function(win){
   if(st.dlc2){
     var s=lawState(), msg='';
     if(win){
-      s.cleared=true; s.clears=(s.clears||0)+1; meta.currency+=50000; msg=' ✦ 클리어 보상 +50,000P';
-      meta.superAwake=meta.superAwake||{}; meta.saOn=meta.saOn||{};
-      ['add','mul'].forEach(function(id){ var nm=skillById(id).name;
-        if(meta.superAwake[id]){ msg+=' · 「'+nm+'」 초각성 이미 보유'; return; }
-        if(Math.random()<0.5){ meta.superAwake[id]=true; meta.saOn[id]=true; msg+=' · ✦✦ 「'+nm+'」 초각성 성공!'; }
-        else msg+=' · 「'+nm+'」 초각성 실패 (50%)'; });
-      msg+=' · (로드아웃에서 ON/OFF · 각성 + Lv.6 필요) · 재입장은 다시 100,000P';
+      s.cleared=true; s.clears=(s.clears||0)+1; meta.currency+=50000; msg=' ✦ 클리어 보상 +50,000P · 재입장은 다시 100,000P';
       if(el) el.textContent=el.textContent.replace('모든 스테이지를 클리어했습니다!','「4개의 법칙」 클리어 — 나눗셈 「÷」 이 나누어떨어졌다.');
+      s.saPending=true;
     } else msg=' 🎟 입장권이 소모되었습니다 — 다시 도전하려면 100,000P 또는 키가 필요합니다.';
     saveMeta(); if(el) el.textContent+=msg;
+    if(win) saShow();
   }
-  if(st.hail&&el){ if(win) el.textContent=el.textContent.replace('모든 스테이지를 클리어했습니다!','재난을 막아냈다 — 우박이 그쳤다.'); else el.textContent='우박이 그치지 않는다… (이 재난은 「진각성」 없이는 막을 수 없다)'; }
+  if(st.hail&&el){ if(win) el.textContent=el.textContent.replace('모든 스테이지를 클리어했습니다!','재난을 막아냈다 — 우박이 그쳤다.'); else el.textContent='우박이 그치지 않는다… (이 재난을 막으려면 더 큰 힘이 필요하다)'; }
 };
 
 /* ---------- 19) 메뉴: 재난 카드(ADVANCED 맨 아래) · DLC2 카드 숨김 ---------- */
@@ -4584,16 +4587,19 @@ renderMenu=function(){
   _rmP();
   var list=document.getElementById('stageList'); if(!list) return;
   var lc=list.children[LAW_IDX]; if(lc) lc.style.display='none';
+  try{ if(lawState().saPending) setTimeout(function(){ saShow(); },0); }catch(e){}
   var old=list.children[HAIL_IDX]; if(!old) return;
   var lock=hailLocked(), cl=!!(meta.clearedStages&&meta.clearedStages[18]);
-  var card=document.createElement('div'); card.className='hailcard'+(lock?' locked':''); card.style.display=old.style.display;
-  card.innerHTML='<canvas class="hc-snow"></canvas><div class="hc-tag mono">'+(lock?'🔒 LOCKED':(cl?'✓ CLEAR':'⚠ START'))+'</div><div class="hc-body"><div class="hc-warn mono">⚠ DISASTER ALERT</div>'
-   +'<div class="hc-title">&lt;재난 발생 : 우박&gt;</div>'
-   +'<div class="hc-sub">콜라츠 추측 — 짝수는 반으로, 홀수는 3n+1 로 부풀어 쏟아지는 우박.<br>떨어지는 우박과 우박수 그래프를 피하며 「3n+1」의 문제를 풀어라.'+(lock?'<br><b>🔒 STAGE 15 「Ω · 궁극의 방정식」 클리어 시 해금</b>':'<br><b>※ 지금의 힘으로는 막을 수 없는 재난. 「진각성」이 필요하다.</b>')+'</div>'
-   +'<div class="hc-stats mono"><span>몬스터 7마리 → 보스</span><span>⬡ 육각형 · 5단계 보스</span><span>BOSS HP 142,857</span><span>3 PHASE</span><span>축소된 맵</span><span>REWARD · TIER LL</span></div></div>';
-  card.onclick=function(){ if(lock){ toast('🔒 STAGE 15 「Ω · 궁극의 방정식」을 클리어하면 열립니다.'); return; } selectedMode='story'; selectedStageIdx=HAIL_IDX; showScreen('loadout'); };
-  list.replaceChild(card,old);
-  if(!snowRAF) snowRAF=requestAnimationFrame(snowLoop);
+  if(lock){ old.style.display='none'; }
+  else {
+    var card=document.createElement('div'); card.className='hailcard'; card.style.display=old.style.display;
+    card.innerHTML='<canvas class="hc-snow"></canvas><div class="hc-tag mono">'+(cl?'✓ CLEAR':'⚠ START')+'</div><div class="hc-body"><div class="hc-warn mono">⚠ DISASTER ALERT</div>'
+     +'<div class="hc-title">&lt;재난 발생 : 우박&gt;</div>'
+     +'<div class="hc-sub">하늘에서 숫자가 쏟아진다.</div></div>';
+    card.onclick=function(){ selectedMode='story'; selectedStageIdx=HAIL_IDX; showScreen('loadout'); };
+    list.replaceChild(card,old);
+    if(!snowRAF) snowRAF=requestAnimationFrame(snowLoop);
+  }
   var box=document.getElementById('adminMenuBox');
   if(box&&isAdmin()&&!document.getElementById('admLawKey')){ var kb=document.createElement('button'); kb.id='admLawKey'; kb.className='btn ghost'; kb.style.cssText='padding:6px 12px;font-size:12px;'; kb.textContent='🔑 DLC2 키 변경 (현재: '+LAW_KEY+')';
     kb.onclick=function(){ var nk=prompt('DLC 2 「4개의 법칙」 새 키 번호',LAW_KEY); if(nk===null||!nk.trim()) return; lawSave(nk.trim(),function(err){ alert(err?'이 기기에만 저장됨 — 서버 저장 실패: '+err:'모든 플레이어에게 적용되었습니다.'); renderMenu(); }); };
@@ -4606,19 +4612,14 @@ renderLoadout=function(){
   _rlP();
   var pg=document.getElementById('pickGrid'); if(!pg) return;
   var st=(selectedMode==='story')?STAGES[selectedStageIdx]:null;
-  var note=document.getElementById('lawNote');
-  if(st&&(st.dlc2||st.hail)){
-    if(!note){ note=document.createElement('div'); note.id='lawNote'; note.className='lawnote mono'; pg.parentNode.insertBefore(note,pg); }
-    note.style.display='';
-    if(st.dlc2){ var s=lawState(), has=lawHasPass();
-      note.innerHTML='➗ <b>DLC 2 · 4개의 법칙</b><br>· 덧셈뺄셈 · 곱셈구구만 자동 장착 (각성 · 초각성 적용 / 다른 슬롯 · 궁극기 봉인)<br>· 보스 「÷」 HP 120,000 · 사칙연산의 땅: 보스에게 주는 피해 ×2<br>· 입장권: '+(has?'<b>보유 ✓</b> (게임을 시작하면 사용됨)':'<b>없음</b> — DLC 탭에서 100,000P 또는 키')+(s.cleared?'<br>· ✓ 클리어 '+(s.clears||1)+'회':''); }
-    else note.innerHTML='⚠ <b>재난 발생 : 우박</b><br>· 맵이 좁고 우박이 계속 떨어진다 · 몬스터 7마리 처치 후 보스 「3n+1」<br>· 보스는 <b>진각성</b>(추후 DLC) 이외의 피해를 99.7% 무효화하고 계속 재생한다.';
-  } else if(note) note.style.display='none';
+  var note=document.getElementById('lawNote'); if(note) note.style.display='none';
   var ag=document.getElementById('awakenGrid'); if(!ag) return;
   var sg=document.getElementById('saGrid'); if(!sg){ sg=document.createElement('div'); sg.id='saGrid'; sg.style.marginTop='16px'; ag.insertAdjacentElement('afterend',sg); }
-  sg.innerHTML='<div class="mono" style="font-size:11px;margin-bottom:8px;color:var(--ink-soft)">✦✦ 초각성 — 각성 피해의 10배 · 훨씬 어려운 문제(시간 정지 · 20초) · 쿨타임 6초 — DLC 2 「4개의 법칙」 클리어 시 스킬마다 50%</div>';
+  if(!['add','mul'].some(saOwned)){ sg.style.display='none'; sg.innerHTML=''; return; }
+  sg.style.display='';
+  sg.innerHTML='<div class="mono" style="font-size:11px;margin-bottom:8px;color:var(--ink-soft)">✦✦ 초각성 — 각성 피해의 10배 · 훨씬 어려운 문제(시간 정지 · 20초) · 쿨타임 6초</div>';
   var grid=document.createElement('div'); grid.className='pickgrid'; sg.appendChild(grid);
-  ['add','mul'].forEach(function(id){ var sk=skillById(id), own=saOwned(id), rd=saReady(id), on=saActive(id);
+  ['add','mul'].filter(saOwned).forEach(function(id){ var sk=skillById(id), own=saOwned(id), rd=saReady(id), on=saActive(id);
     var chip=document.createElement('div'); chip.className='pickchip tier-LL'+(own?'':' used');
     chip.innerHTML='<div class="pc-t">'+(own?(rd?(on?'초각성 · ON ✦✦':'초각성 · OFF'):'각성 + Lv.6 필요'):'🔒 미획득')+'</div>'+(own?'✦✦ ':'')+sk.name+'<div style="font-size:10px;opacity:.75;margin-top:4px;font-weight:400">'+(id==='add'?'「수직선 붕괴」 네 자리 이동 → 거대 수직선 위를 도약하며 폭격':'「곱셈 격자 폭풍」 큰 수 곱셈 → 격자 포대 일제사격 + X 광선')+'</div>';
     if(on) chip.style.outline='2px solid var(--ink)';
@@ -4626,29 +4627,53 @@ renderLoadout=function(){
     grid.appendChild(chip); });
 };
 
-/* ---------- 21) 로비 배경: 우박수(콜라츠) 그래프 ---------- */
-var LG={n:27,ch:null,i:0,t:0,hold:0};
-function lgNew(){ var c=[27,97,871,703,231,447,639,155,73,91,111,6171]; LG.n=Math.random()<0.6?pick(c):randInt(30,999); LG.ch=colChain(LG.n); LG.i=0; LG.t=0; LG.hold=0; }
-var _llP=lobbyLoop;
-lobbyLoop=function(){
-  _llP();
-  try{
-    var cv=document.getElementById('lobbyBg'); if(!cv||!lobbyActive()) return; var x=cv.getContext('2d'), w=cv.width, h=cv.height;
-    if(!LG.ch) lgNew();
-    var L=LG.ch.length-1, mx=colMax(LG.ch), sp=Math.max(1,L/170);
-    if(LG.i<L){ LG.t+=sp; LG.i=Math.min(L,Math.floor(LG.t)); } else { LG.hold++; if(LG.hold>200) lgNew(); }
-    var ink=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#111', M=Math.max(24,w*0.06), gx=M, gy=h*0.16, gw=w-2*M, gh=h*0.68;
-    x.save(); x.globalAlpha=0.16; x.strokeStyle=ink; x.lineWidth=1;
-    x.beginPath(); x.moveTo(gx,gy+gh); x.lineTo(gx+gw,gy+gh); x.moveTo(gx,gy); x.lineTo(gx,gy+gh); x.stroke();
-    x.globalAlpha=0.22; x.lineWidth=2; x.beginPath();
-    for(var k=0;k<=LG.i;k++){ var X=gx+k/L*gw, Y=gy+gh-(LG.ch[k]/mx)*gh; if(k) x.lineTo(X,Y); else x.moveTo(X,Y); } x.stroke();
-    var lx=gx+LG.i/L*gw, ly=gy+gh-(LG.ch[LG.i]/mx)*gh; x.globalAlpha=0.5; x.fillStyle=ink; x.beginPath(); x.arc(lx,ly,4,0,TAU); x.fill();
-    x.font='12px JetBrains Mono,monospace'; x.textAlign='left'; x.globalAlpha=0.4;
-    x.fillText('우박수 그래프 · n = '+LG.n+'   step '+LG.i+' / '+L+'   max '+mx,gx+6,gy-8);
-    x.textAlign='center'; x.fillText(String(LG.ch[LG.i]),lx,ly-10);
-    x.restore();
-  }catch(e){}
-};
+/* ---------- 21) 로비: 트레일러 보기 ---------- */
+var TRAILER_URL=(window.ECLIPSILON_CONFIG&&window.ECLIPSILON_CONFIG.trailerUrl)||'';   /* ← 트레일러 링크를 이 따옴표 안에 붙여 넣으세요 */
+(function(){ var tb=document.getElementById('lobbyTrailer'); if(!tb) return;
+  tb.addEventListener('click',function(){ if(!TRAILER_URL){ toast('트레일러 링크가 아직 설정되지 않았습니다.'); return; } window.open(TRAILER_URL,'_blank','noopener'); }); })();
+
+/* ---------- 22) DLC 2 클리어 → 초각성 판정(뽑기) 화면 ---------- */
+var SA_IDS=['add','mul'];
+(function(){
+  var css2=document.createElement('style');
+  css2.textContent='#sagrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}'
+   +'.sacard{border:3px double #7fc8ff;padding:22px 10px;text-align:center;background:linear-gradient(135deg,rgba(127,200,255,.18),rgba(255,138,138,.12));min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}'
+   +'.sacard .sa-n{font-weight:700;font-size:15px}.sacard .sa-s{font-size:40px;font-weight:700;font-family:"JetBrains Mono",monospace;line-height:1}'
+   +'.sacard .sa-t{font-size:12px;min-height:1.4em}.sacard.win{box-shadow:4px 4px 0 #7fc8ff;border-color:#7fc8ff}.sacard.lose{opacity:.6}';
+  document.head.appendChild(css2);
+  var scr=document.createElement('div'); scr.className='screen'; scr.id='screen-sagacha';
+  scr.innerHTML='<div class="wrap"><div class="brand"><h1>✦✦ 초각성 판정</h1><p>「4개의 법칙」 클리어 — 스킬마다 50% 확률로 초각성을 얻습니다.</p></div>'
+   +'<div id="sagrid"></div><div class="mono" id="saMsg" style="min-height:1.6em;text-align:center;font-size:13px;margin-bottom:12px"></div>'
+   +'<button class="btn" id="saGo">판정 시작</button></div>';
+  document.getElementById('screen-lobby').parentNode.appendChild(scr);
+  var busy=false;
+  function cardHTML(id,state,txt){ var sk=skillById(id); return '<div class="sa-n">'+sk.name+'</div><div class="sa-s">'+state+'</div><div class="sa-t mono">'+txt+'</div>'; }
+  window.__saRender=function(){
+    var g=document.getElementById('sagrid'); g.innerHTML='';
+    SA_IDS.forEach(function(id){ var c=document.createElement('div'); c.className='sacard'; c.id='sac-'+id;
+      c.innerHTML=saOwned(id)?cardHTML(id,'✦✦','이미 보유'):cardHTML(id,'?','50%'); g.appendChild(c); });
+    document.getElementById('saMsg').textContent=''; var b=document.getElementById('saGo'); b.disabled=false; b.textContent='판정 시작'; busy=false;
+  };
+  document.getElementById('saGo').addEventListener('click',function(){
+    var b=this; if(busy) return;
+    if(!lawState().saPending){ showScreen('gameover'); return; }
+    busy=true; b.disabled=true;
+    meta.superAwake=meta.superAwake||{}; meta.saOn=meta.saOn||{};
+    var results={}; SA_IDS.forEach(function(id){ if(saOwned(id)) results[id]='own'; else if(Math.random()<0.5){ results[id]='win'; meta.superAwake[id]=true; meta.saOn[id]=true; } else results[id]='lose'; });
+    lawState().saPending=false; saveMeta();
+    var i=0;
+    (function next(){
+      if(i>=SA_IDS.length){ b.textContent='결과 화면으로'; b.disabled=false; busy=false;
+        var w=SA_IDS.filter(function(id){ return results[id]==='win'; }).length; document.getElementById('saMsg').textContent=w?('✦✦ 초각성 '+w+'개 획득! (사용하려면 각성 + Lv.6 필요 · 로드아웃에서 ON/OFF)'):'이번엔 초각성을 얻지 못했습니다.'; return; }
+      var id=SA_IDS[i++], c=document.getElementById('sac-'+id);
+      if(results[id]==='own'){ setTimeout(next,450); return; }
+      var n=0, sym=['?','✦','✕','✧','…'], iv=setInterval(function(){ c.querySelector('.sa-s').textContent=sym[n++%sym.length]; },90);
+      setTimeout(function(){ clearInterval(iv); var ok=results[id]==='win'; c.className='sacard '+(ok?'win':'lose'); c.innerHTML=cardHTML(id,ok?'✦✦':'✕',ok?'초각성 획득!':'실패'); SFX.play(ok?'win':'bad'); setTimeout(next,600); },1500);
+    })();
+  });
+  window.__saShow=function(){ window.__saRender(); showScreen('sagacha'); };
+})();
+function saShow(){ window.__saShow(); }
 })();
 
 })();
@@ -5762,7 +5787,7 @@ window.__sfx=SFX;
    +'<button class="btn" id="lawPay" style="margin-bottom:8px"></button><div class="mono" id="lawMsg" style="min-height:1.4em;font-size:12px;color:#d32f2f;margin-bottom:8px"></div><button class="btn ghost" id="lawNo">취소</button></div>';
   document.body.appendChild(gt);
   ['keydown','keyup'].forEach(function(t){ gt.addEventListener(t,function(e){ e.stopPropagation(); }); });
-  function go(){ gt.style.display='none'; selectedMode='story'; selectedStageIdx=L.idx; showScreen('loadout'); }
+  function go(){ gt.style.display='none'; selectedMode='story'; selectedStageIdx=L.idx; startRun('story',L.idx); }   /* 스킬 선택창 없이 곱셈구구 · 덧뺄셈으로 바로 입장 */
   function grant(){ L.state().pass=true; saveMeta(); }
   function openGate(){
     if(L.hasPass()){ go(); return; }
@@ -5791,7 +5816,7 @@ window.__sfx=SFX;
     var s=L.state(), has=L.hasPass(), sa=meta.superAwake||{};
     var c=document.createElement('div'); c.className='lawcard';
     c.innerHTML='<div class="lw-ops">+ − × ÷</div><div class="mono" style="font-size:11px;opacity:.7">DLC 2 · ARITHMETIC</div><div style="font-size:17px;font-weight:700;margin:4px 0">➗ 4개의 법칙</div>'
-     +'<div style="font-size:12px;opacity:.8;line-height:1.6">사칙연산의 마지막 기호, 보스 「÷」 (HP 120,000). 덧셈뺄셈 · 곱셈구구만 사용 가능 (각성 OK). 20마리 처치 후 보스전 · 나눗셈 BOSS QUIZ (15초 간격 · 10초 풀이 · 0으로 나누기 주의).<br>클리어 보상 : <b>50,000P</b> + 덧셈뺄셈 · 곱셈구구 각각 <b>50% 초각성</b></div>'
+     +'<div style="font-size:12px;opacity:.8;line-height:1.6">사칙연산의 땅으로 입장합니다.</div>'
      +'<div class="mono" style="font-size:11.5px;margin-top:8px">'+(has?'🎟 입장권 보유 — 눌러서 출전':'🔒 입장 : 🔑 키 번호 또는 💰 100,000P')+(s.cleared?' · ✓ 클리어 '+(s.clears||1)+'회':'')+(sa.add?' · ✦✦ 덧셈뺄셈':'')+(sa.mul?' · ✦✦ 곱셈구구':'')+'</div>';
     c.onclick=openGate; box.appendChild(c);
   };
