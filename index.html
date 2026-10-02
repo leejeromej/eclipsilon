@@ -1640,9 +1640,14 @@ function endRun(win){
   var bonus=0;
   var nextBtn=document.getElementById('goNext');
   if(win){
+    var alreadyCleared = G.mode==='story' && meta.clearedStages && meta.clearedStages[G.stage.id];
     bonus = G.mode==='story' && G.stage && G.stage.hail
-      ? ((meta.clearedStages && meta.clearedStages[G.stage.id]) ? 14285 : 0)
-      : (G.mode==='story' && meta.clearedStages && meta.clearedStages[G.stage.id] ? 14285 : (150 + (G.mode==='story'? G.stage.id*30 : 0)));
+      ? (alreadyCleared ? 14285 : 0)
+      : (G.mode==='story'
+          ? (alreadyCleared
+              ? Math.floor((G.stage.bonusP || (150 + G.stage.id*30)) * 0.10)
+              : (150 + G.stage.id*30))
+          : 0);
     meta.currency += bonus;
     var extraMsg='';
     if(G.mode==='story'){
@@ -2842,11 +2847,12 @@ function godelTick(dt){
   if(!G.challenge){ g.quizT-=dtms; if(g.quizT<=0){ openGodelQuiz(); g.quizT=r<0.5?9000:12000; } }
 }
 function payHidden(){
-  var first=!meta.owned.godel, gain=0;
-  if(first) meta.owned.godel=1; else { gain=Math.round(5000*endlessMult()); meta.currency+=gain; G.earned+=gain; }
+  var first=!meta.owned.godel, gain=Math.round(5000*endlessMult());
+  if(first) meta.owned.godel=1;
+  meta.currency+=gain; G.earned+=gain;
   saveMeta();
   var el=document.createElement('div'); el.className='bossBanner';
-  el.innerHTML='<div class="bb-s mono">— HIDDEN CLEAR —</div><div class="bb-n">'+(first?'스킬 「괴델 문장」 획득 (TIER L)':'보너스 +'+gain+'P')+'</div><div class="bb-t">레벨업은 스킬 뽑기 화면에서 포인트로만 가능</div>';
+  el.innerHTML='<div class="bb-s mono">— HIDDEN CLEAR —</div><div class="bb-n">'+(first?'스킬 「괴델 문장」 획득 (TIER L) · ':'')+'보너스 +'+gain.toLocaleString()+'P</div><div class="bb-t">레벨업은 스킬 뽑기 화면에서 포인트로만 가능</div>';
   document.body.appendChild(el); setTimeout(function(){ el.remove(); },3400);
 }
 var _up5=update;
@@ -3661,11 +3667,12 @@ function drawChaitin(){
 }
 
 function payHiddenChaitin(){
-  var first=!meta.owned.chaitin, gain=0;
-  if(first) meta.owned.chaitin=1; else { gain=Math.round(9000*endlessMult()); meta.currency+=gain; G.earned+=gain; }
+  var first=!meta.owned.chaitin, gain=Math.round(9000*endlessMult());
+  if(first) meta.owned.chaitin=1;
+  meta.currency+=gain; G.earned+=gain;
   saveMeta();
   var el=document.createElement('div'); el.className='bossBanner';
-  el.innerHTML='<div class="bb-s mono">— HIDDEN CLEAR —</div><div class="bb-n">'+(first?'스킬 「샤이틴 상수」 획득 (TIER L)':'전리품 「정지 확률의 파편」 +'+gain+'P')+'</div><div class="bb-t">레벨업은 스킬 뽑기 화면에서 포인트로만 가능</div>';
+  el.innerHTML='<div class="bb-s mono">— HIDDEN CLEAR —</div><div class="bb-n">'+(first?'스킬 「샤이틴 상수」 획득 (TIER L) · ':'전리품 「정지 확률의 파편」 · ')+'보너스 +'+gain.toLocaleString()+'P</div><div class="bb-t">레벨업은 스킬 뽑기 화면에서 포인트로만 가능</div>';
   document.body.appendChild(el); setTimeout(function(){ el.remove(); },3400);
 }
 
