@@ -2762,13 +2762,10 @@ update=function(dt){
     if(G.endlessBossTimer===undefined) G.endlessBossTimer=ENDLESS_CFG.bossFirst;
     G.endlessBossTimer -= dt*1000;
     if(G.endlessBossTimer<=0 && ENDLESS_BOSSES.length){
-      // 보스를 처치하지 않고 시간이 지나도 다음 난입 보스로 교대한다.
+      // 기존 보스는 전장에 남기고, 새 보스를 추가로 난입시킨다.
       if(G.boss && !G.boss.dead){
         var oldBoss=G.boss;
-        oldBoss.dead=true;
-        G.enemies=G.enemies.filter(function(e){return e!==oldBoss;});
-        G.projectiles=G.projectiles.filter(function(p){return p.kind!=='bossbolt';});
-        spawnFloat(oldBoss.x,oldBoss.y-48,'다음 보스 난입!');
+        spawnFloat(oldBoss.x,oldBoss.y-48,'보스 추가 난입!');
       }
       var pk=ENDLESS_BOSSES[rnd(ENDLESS_BOSSES.length)];
       var mn=Math.min(3.5, 1+(G.elapsed/1000)/240);
@@ -5915,6 +5912,21 @@ window.__sfx=SFX;
   var _ssHC=showScreen; showScreen=function(n){ _ssHC.apply(this,arguments); if(n==='settings') paint(); selfPaint(); };
   setInterval(selfPaint,1000); paint(); selfPaint();
 })();
+
+/* 히든 보스 생존 중에는 무한 모드 경과 시간과 페이즈 시계를 정지 */
+var _updateBeforeHiddenClockPause=update;
+update=function(dt){
+  var g=G, holdClock=!!(g && g.running && g.mode==='endless' && (
+    (g.hiddenBoss && !g.hiddenBoss.dead) || (g.hiddenBoss2 && !g.hiddenBoss2.dead)
+  ));
+  var elapsedBefore=holdClock?g.elapsed:0, phaseBefore=holdClock?g.phaseElapsed:0;
+  _updateBeforeHiddenClockPause(dt);
+  if(holdClock && G===g){
+    /* update 중 히든 보스가 처치됐다면 정지 해제 */
+    var stillAlive=(g.hiddenBoss && !g.hiddenBoss.dead) || (g.hiddenBoss2 && !g.hiddenBoss2.dead);
+    if(stillAlive){ g.elapsed=elapsedBefore; g.phaseElapsed=phaseBefore; }
+  }
+};
 
 showScreen('lobby');
 
