@@ -4659,25 +4659,23 @@ renderLoadout=function(){
     if(on) chip.style.outline='2px solid var(--ink)';
     chip.onclick=function(){ if(!own||!rd) return; meta.saOn=meta.saOn||{}; meta.saOn[id]=!on; saveMeta(); renderLoadout(); };
     grid.appendChild(chip); });
-  /* 초각성 ON/OFF 창에서도 난이도 변경 가능 — 도감 기능과 동일한 saEasy 설정 공유 */
-  var easyBox=document.createElement('div'); easyBox.className='tiergroup'; easyBox.style.marginTop='12px';
-  easyBox.innerHTML='<div class="tlabel">✦✦ 초각성 문제 난이도 (스킬당 '+SA_EASY_PRICE.toLocaleString()+'P)</div><div class="mono" style="font-size:11px;opacity:.75;margin:0 0 8px">구매한 난이도 설정은 스킬 도감과 공유됩니다.</div>';
+  var easy=document.createElement('div'); easy.style.cssText='margin-top:12px;padding:12px;border:1.5px solid var(--line);background:var(--card-bg)';
+  easy.innerHTML='<div class="mono" style="font-size:11px;margin-bottom:8px">✦✦ 초각성 문제 난이도 낮추기 · 스킬당 '+SA_EASY_PRICE.toLocaleString()+'P</div>';
   ['add','mul'].filter(saOwned).forEach(function(id){
-    var sk=skillById(id), has=saEasy(id);
-    var row=document.createElement('div'); row.className='skillrow';
-    row.innerHTML='<div><div class="sname">✦✦ '+sk.name+' · '+SA[id].name+'</div><div class="sdesc">'+(id==='add'?'세 자리 수 이동 → 두 자리 수 이동':'큰 수 곱셈 → 두·세 자리×한 자리 또는 깔끔한 합차(a²−b²)')+'</div></div>';
-    var bt=document.createElement('button'); bt.className='btn'; bt.style.width='auto'; bt.style.padding='8px 12px';
-    bt.textContent=has?'구매 완료 ✓':'쉬운 문제 (−'+SA_EASY_PRICE.toLocaleString()+'P)'; bt.disabled=has;
+    var sk=skillById(id), has=saEasy(id), row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid var(--grid)';
+    var label=document.createElement('div'); label.textContent='✦✦ '+sk.name; label.style.cssText='font-size:12px;font-weight:700';
+    var bt=document.createElement('button'); bt.className='btn ghost'; bt.style.cssText='width:auto;padding:7px 10px;font-size:11px'; bt.textContent=has?'구매 완료 ✓':'쉬운 문제 (−'+SA_EASY_PRICE.toLocaleString()+'P)'; bt.disabled=has;
     bt.onclick=function(){ if(!isAdmin()&&meta.currency<SA_EASY_PRICE){ toast('포인트가 부족합니다. (필요 '+SA_EASY_PRICE.toLocaleString()+'P)'); return; }
-      if(!confirm('「'+sk.name+'」 초각성 문제를 쉬운 난이도로 바꿀까요? ('+SA_EASY_PRICE.toLocaleString()+'P)')) return;
+      if(!confirm('「'+sk.name+'」 초각성 문제를 쉬운 난이도로 변경할까요? ('+SA_EASY_PRICE.toLocaleString()+'P)')) return;
       if(!isAdmin()) meta.currency-=SA_EASY_PRICE; meta.saEasy=meta.saEasy||{}; meta.saEasy[id]=true; saveMeta(); renderLoadout(); };
-    row.appendChild(bt); easyBox.appendChild(row);
+    row.appendChild(label); row.appendChild(bt); easy.appendChild(row);
   });
-  sg.appendChild(easyBox);
+  sg.appendChild(easy);
 };
 
 /* ---------- 21) 로비: 트레일러 보기 ---------- */
-var TRAILER_URL=(window.ECLIPSILON_CONFIG&&window.ECLIPSILON_CONFIG.trailerUrl)||'';   /* ← 트레일러 링크를 이 따옴표 안에 붙여 넣으세요 */
+var TRAILER_URL=(window.ECLIPSILON_CONFIG&&window.ECLIPSILON_CONFIG.trailerUrl)||'https://www.instagram.com/reel/Dds8uJGzjaf/?stkn=dmpvNDJtOTRqdGo2';
 (function(){ var tb=document.getElementById('lobbyTrailer'); if(!tb) return;
   tb.addEventListener('click',function(){ if(!TRAILER_URL){ toast('트레일러 링크가 아직 설정되지 않았습니다.'); return; } window.open(TRAILER_URL,'_blank','noopener'); }); })();
 
@@ -4863,7 +4861,7 @@ var JOY={active:false,x:0,y:0};
 /* ===================== 개발자 과자 사주기 (후원) ===================== */
 (function(){
   var ACC='토스 1908-3321-6303', NUM='1908-3321-6303';
-  var cfg=window.ECLIPSILON_CONFIG||{}, sup=Array.isArray(cfg.supporters)?cfg.supporters:[];
+  var cfg=window.ECLIPSILON_CONFIG||{}, sup=Array.isArray(cfg.supporters)?cfg.supporters.slice():[]; if(sup.indexOf('<첫 후원자> mathpig2')===-1) sup.unshift('<첫 후원자> mathpig2');
   var css=document.createElement('style');
   css.textContent='#donTabs{display:flex;gap:6px;margin:14px 0}#donTabs button{flex:1;padding:10px 4px;border:2px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:14px;cursor:pointer}#donTabs button.on{background:var(--ink);color:var(--bg)}'
    +'.donacc{font-size:24px;font-weight:700;letter-spacing:.04em;margin:10px 0 14px;word-break:break-all}';
