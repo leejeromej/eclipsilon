@@ -727,7 +727,7 @@ var SKILL_POOL=[
  {id:'trigderiv',tier:'SS',name:'삼각함수의 미분',desc:'삼각함수의 주기를 찢는 초고위력 일격.',study:'sin(x)의 미분은 cos(x), cos(x)의 미분은 −sin(x)입니다.',kind:'burst',baseDmg:78,cd:17500,win:8000,pause:true,gen:trigDerivGen},
  {id:'exphyp',tier:'SS',name:'지수·쌍곡선함수',desc:'공간을 추적하는 유도 미사일 8기.',study:'eˣ은 미분해도 자기 자신이며 cosh, sinh는 eˣ과 e⁻ˣ의 조합입니다.',kind:'homing',count:8,baseDmg:22,cd:18000,win:8600,pause:true,gen:expHypGen},
  {id:'limit',tier:'SS',name:'극한과 로피탈',desc:'한계점을 관통하는 초압축 빔.',study:'극한은 입력이 특정 값에 가까워질 때 함수값이 접근하는 값을 다룹니다.',kind:'limit',baseDmg:92,cd:19000,win:9000,pause:true,gen:limitGen},
- {id:'partial',tier:'SS',name:'편미분',desc:'x축과 y축을 동시에 절단하는 교차 파동.',study:'여러 변수를 가진 함수에서 한 변수만 변화시켜 변화율을 구합니다.',kind:'partial',baseDmg:88,cd:18500,win:9000,pause:true,gen:partialGen},
+ {id:'partial',tier:'SS',name:'편미분',desc:'x축과 y축을 동시에 절단하는 교차 파동.',study:'여러 변수를 가진 함수에서 한 변수만 변화시켜 변화율을 구합니다.',kind:'partial',baseDmg:88,cd:18500,win:13500,pause:true,gen:partialGen},
  {id:'eigen',tier:'SSS',name:'고유값',desc:'고유공간을 소환해 적을 압축한다.',study:'Av=λv에서 방향이 보존되는 벡터의 배율 λ가 고유값입니다.',kind:'eigen',baseDmg:115,cd:22000,win:9800,pause:true,gen:eigenGen},
  {id:'optimize',tier:'SSS',name:'다변수 최적화',desc:'최솟값을 향해 전장을 붕괴시키는 특이점.',study:'여러 변수의 편미분을 동시에 0으로 두어 임계점을 찾고 최적값을 분석합니다.',kind:'optimize',baseDmg:125,cd:23500,win:10000,pause:true,gen:optimizeGen},
  {id:'taylor',tier:'SSS',name:'테일러 전개',desc:'함수를 무한급수처럼 분해하는 연쇄 초신성.',study:'함수를 한 점 근처에서 도함수 정보로 다항식에 근사합니다.',kind:'taylor',baseDmg:145,cd:25000,win:10500,pause:true,gen:taylorGen},
@@ -3438,11 +3438,33 @@ AW.series={gen:function(){ var n=randInt(3,14); return {q:'1부터 '+n+'까지�
     for(w=0;w<waves;w++)(function(w){ safeLater(w*180,function(){ nova(140+w*70,d*(1+0.25*w)); }); })(w);
     spawnFloat(px,py-44,'합 '+c.a+' → 팽창 파동 '+waves+'겹'); }};
 
-AW.integral={gen:function(){ var a=randInt(2,10); return {q:'∫₀^'+a+' 2x dx 의 값은?',a:a*a}; },
-  fire:function(sk,d,c){ var p=G.player,px=p.x,py=p.y,R=Math.min(480,140+c.a*3);
-    safeLater(0,function(){ blast(px,py,R*0.5,d*1.3); });
-    safeLater(260,function(){ blast(px,py,R,d*2.0); });
-    spawnFloat(px,py-44,'넓이 '+c.a+' → 누적 팽창 폭발'); }};
+AW.integral={gen:function(){
+    var t=rnd(6), a, b, c, f;
+    if(t===0){   /* King property: ∫0^a f(x)/(f(x)+f(a-x)) dx = a/2 */
+      a=2*randInt(1,6); f=pick([['x²','(a−x)²'],['eˣ','e^{a−x}'],['x³','(a−x)³'],['sin x','sin(a−x)']]);
+      var top=f[0], bot=f[1].replace(/a/g,String(a));
+      if(f[0]==='sin x'||f[0]==='eˣ'){ /* 주기·지수형도 King property 로 a/2 */ }
+      return {q:'∫_{0}^{'+a+'}  \\frac{'+top+'}{'+top+' + '+bot+'} dx = ?\n(힌트: x → '+a+'−x 로 치환해 더해 보세요)',a:a/2,king:true}; }
+    if(t===1){   /* 홀함수 대칭 상쇄 + 짝함수 */
+      a=randInt(2,4); b=randInt(1,4); c=randInt(1,3);
+      return {q:'∫_{-'+a+'}^{'+a+'} ('+b+'x³ + '+(3*c)+'x² + 2x⁵) dx = ?',a:2*c*a*a*a,odd:true}; }
+    if(t===2){   /* 합이 일정한 대칭: ∫0^{2a} f(x)dx , f(x)+f(2a-x)=상수 */
+      a=randInt(1,5); b=randInt(1,4); var k=randInt(1,3);
+      return {q:'f(x) = '+k+'x + sin(x−'+a+')   (0 ≤ x ≤ '+(2*a)+')\n∫_{0}^{'+(2*a)+'} f(x) dx = ?\n(힌트: x = '+a+' 중심 대칭)',a:k*2*a*a,king:true}; }
+    if(t===3){   /* |x| 절댓값 대칭 */
+      a=randInt(2,7); b=randInt(1,3);
+      return {q:'∫_{-'+a+'}^{'+a+'} '+b+'|x| dx = ?',a:b*a*a}; }
+    if(t===4){   /* 정적분 + 미적분학 기본정리 (미분과 적분 결합) */
+      a=randInt(2,4); b=randInt(1,3);
+      return {q:'g(x) = ∫_{0}^{x²} '+b+'t dt\n g′('+a+') = ?',a:2*b*a*a*a,ftc:true}; }
+    /* t===5: 구간 분할 (∫0^a + ∫a^b 합쳐서) */
+    a=randInt(2,5); b=randInt(1,4); c=randInt(1,4);
+    var bb=2*randInt(1,3); return {q:'∫_{0}^{'+a+'} ('+bb+'x + '+c+') dx + ∫_{'+a+'}^{'+(a+2)+'} ('+bb+'x + '+c+') dx = ?',a:bb*(a+2)*(a+2)/2+c*(a+2)}; },
+  fire:function(sk,d,c){ var p=G.player,px=p.x,py=p.y,v=Math.abs(c.a),R=Math.min(480,230+v*10);
+    safeLater(0,function(){ blast(px,py,R*0.45,d*1.3); });
+    safeLater(220,function(){ blast(px,py,R*0.75,d*1.7); });
+    safeLater(460,function(){ blast(px,py,R,d*2.2,function(e){ if(c.king||c.odd||c.ftc) freezeE(e,1500); }); });
+    spawnFloat(px,py-44,'∫ = '+(Math.round(c.a*100)/100)+(c.king?' · King property → 대칭 폭발 + 1.5초 정지':c.odd?' · 홀함수 상쇄 → 정지 폭발':c.ftc?' · 기본정리 → 정지 폭발':' · 누적 3단 폭발')); }};
 
 AW.chain={gen:function(){
     var n=pick([2,3]), a=pick([-3,-2,-1,1,2,3]), b=pick([-4,-3,-2,-1,1,2,3,4]), x0=pick([-3,-2,-1,1,2,3]);
@@ -3523,12 +3545,12 @@ AW.demoivre={gen:function(){
 
 AW.epsdelta={gen:function(){ return {q:'',a:0}; }, fire:function(){}};
 
-var AWD2={series:170,integral:190,chain:230,matrix:230,limit:280,partial:270,eigen:330,optimize:340,taylor:380,eulerphi:360,demoivre:260};
+var AWD2={series:170,integral:310,chain:230,matrix:230,limit:280,partial:270,eigen:330,optimize:340,taylor:380,eulerphi:360,demoivre:260};
 Object.keys(AWD2).forEach(function(k){ AWD[k]=AWD2[k]; });
 
 var AW_INFO2={
  series:'합이 클수록 팽창 파동이 겹겹이 발사',
- integral:'넓이만큼 누적 팽창 폭발',
+ integral:'King property·대칭·기본정리 문제를 풀면 3단 폭발(대칭형은 1.5초 정지 포함)',
  chain:'f′·g′ 값만큼 연쇄 광선 줄기 발사',
  matrix:'det 절댓값만큼 촘촘해지는 격자 절단',
  limit:'극한값으로 압축 광선 + 폭발',
@@ -3544,7 +3566,7 @@ Object.keys(AW_INFO2).forEach(function(k){ AW_INFO[k]=AW_INFO2[k]; });
 
 var AWINFO2={
  series:{study:'1부터 n까지의 합은 n(n+1)/2 입니다 (가우스의 합).',fx:'합이 클수록 겹겹의 팽창 파동을 발사.'},
- integral:{study:'∫₀^a 2x dx = a² — 적분은 미분의 역연산이며 누적된 넓이를 구합니다.',fx:'넓이 값만큼 팽창하는 2단 폭발.'},
+ integral:{study:'King property: ∫₀^a f(x)/(f(x)+f(a−x)) dx = a/2. 홀함수는 대칭구간 적분이 0, 기본정리 d/dx ∫₀^{u(x)} f(t)dt = f(u)·u′.',fx:'값이 클수록 커지는 3단 폭발. 대칭형 문제는 1.5초 정지까지.'},
  chain:{study:'합성함수의 미분 (f∘g)′(x) = f′(g(x))·g′(x) — 바깥과 안쪽의 변화율을 곱합니다.',fx:'곱한 값만큼 연쇄 광선 줄기 발사.'},
  matrix:{study:'2×2 행렬식 ad−bc 는 선형변환이 넓이를 몇 배로 바꾸는지를 나타냅니다.',fx:'행렬식 절댓값만큼 촘촘한 격자로 전장을 절단.'},
  limit:{study:'lim(x→a) (x²−a²)/(x−a) = 2a — 인수분해로 약분해 극한값을 구합니다.',fx:'극한값만큼 강한 압축 광선 + 폭발.'},
