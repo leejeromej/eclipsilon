@@ -4861,13 +4861,16 @@ var JOY={active:false,x:0,y:0};
 /* ===================== 개발자 과자 사주기 (후원) ===================== */
 (function(){
   var ACC='토스 1908-3321-6303', NUM='1908-3321-6303';
-  var cfg=window.ECLIPSILON_CONFIG||{}, sup=Array.isArray(cfg.supporters)?cfg.supporters.slice():[]; if(sup.indexOf('<첫 후원자> mathpig2')===-1) sup.unshift('<첫 후원자> mathpig2');
+  var cfg=window.ECLIPSILON_CONFIG||{}, sup=Array.isArray(cfg.supporters)?cfg.supporters.slice():[]; if(sup.indexOf('mathpig2')===-1) sup.unshift('mathpig2');
   var css=document.createElement('style');
-  css.textContent='#donTabs{display:flex;gap:6px;margin:14px 0}#donTabs button{flex:1;padding:10px 4px;border:2px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:14px;cursor:pointer}#donTabs button.on{background:var(--ink);color:var(--bg)}'
-   +'.donacc{font-size:24px;font-weight:700;letter-spacing:.04em;margin:10px 0 14px;word-break:break-all}';
+  css.textContent='#screen-donate .wrap{display:flex;flex-direction:column;min-height:calc(100vh - 84px);box-sizing:border-box}#donBack{margin-top:auto!important;align-self:center}#donTabs{display:flex;gap:6px;margin:14px 0}#donTabs button{flex:1;padding:10px 4px;border:2px solid var(--line);background:transparent;color:var(--ink);font:inherit;font-size:14px;cursor:pointer}#donTabs button.on{background:var(--ink);color:var(--bg)}'
+   +'.donacc{font-size:24px;font-weight:700;letter-spacing:.04em;margin:10px 0 14px;word-break:break-all}'
+   +'#donList{background:#050505;color:#f3f3f3;text-align:center;padding:20px 14px;border:1px solid #252525;border-radius:10px;font-family:Georgia,"Noto Serif KR",serif;min-height:70px}'
+   +'#donList .rankrow{display:block!important;text-align:center!important;font-size:24px;font-weight:600;line-height:1.6;padding:12px 4px;border-bottom:1px solid #292929;letter-spacing:.02em;font-family:Georgia,"Noto Serif KR",serif}'
+   +'#donList .rankrow:last-child{border-bottom:0}';
   document.head.appendChild(css);
   var scr=document.createElement('div'); scr.className='screen'; scr.id='screen-donate';
-  scr.innerHTML='<div class="wrap"><div class="brand"><h1>☕ 개발자 과자 사주기</h1><p>재미있게 즐기셨다면 작은 응원을 보내주세요. 큰 힘이 됩니다!</p></div>'
+  scr.innerHTML='<div class="wrap"><div class="brand"><h1>개발자 과자 사주기</h1><p>재미있게 즐기셨다면 작은 응원을 보내주세요. 큰 힘이 됩니다!</p></div>'
    +'<div id="donTabs"><button data-t="pay" class="on">후원하기</button><button data-t="list">후원자</button><button data-t="proof">후원인증하기</button></div>'
    +'<div id="donPay"><div class="gocard"><div class="mono" style="font-size:12px;opacity:.7">계좌번호</div><div class="donacc mono" id="donAcc"></div>'
    +'<button class="btn" id="donCopy">계좌번호 복사</button><div class="mono" id="donMsg" style="min-height:1.4em;margin-top:10px;font-size:13px"></div></div></div>'
@@ -4893,9 +4896,9 @@ var JOY={active:false,x:0,y:0};
     document.getElementById('donProof').style.display=(t==='proof')?'block':'none'; if(t==='proof') adminLoad();
     if(t==='list'){
       var box=document.getElementById('donList'); box.textContent='';
-      if(!sup.length){ var e=document.createElement('div'); e.className='mono'; e.style.cssText='padding:20px;text-align:center;opacity:.7'; e.textContent='첫 번째 후원자가 되어보세요! ☕'; box.appendChild(e); return; }
+      if(!sup.length){ var e=document.createElement('div'); e.className='mono'; e.style.cssText='padding:20px;text-align:center;opacity:.7'; e.textContent='첫 번째 후원자가 되어보세요!'; box.appendChild(e); return; }
       sup.forEach(function(n,i){ var r=document.createElement('div'); r.className='rankrow'; r.style.gridTemplateColumns='44px 1fr';
-        var a=document.createElement('span'); a.textContent='☕'; var b=document.createElement('span'); b.textContent=String(n); r.appendChild(a); r.appendChild(b); box.appendChild(r); });
+        r.textContent=String(n).replace(/^<첫\s*후원자>\s*/,'').replace(/^☕\s*/,''); box.appendChild(r); });
     }
   }
   /* ---- 관리자: 받은 후원 인증 보기 ---- */
@@ -4935,7 +4938,7 @@ var JOY={active:false,x:0,y:0};
     sb.from('donor_proofs').insert({real_name:nm||null,nickname:nk||null,photo:prImg}).then(function(r){
       btn.disabled=false;
       if(r&&r.error){ prSay('전송에 실패했습니다: '+(r.error.message||'오류'),true); return; }
-      prSay('✅ 전송되었습니다! 확인 후 후원자 목록에 올려드릴게요. 감사합니다 ☕');
+      prSay('전송되었습니다! 확인 후 후원자 목록에 올려드릴게요. 감사합니다.');
       document.getElementById('prName').value=''; document.getElementById('prNick').value=''; document.getElementById('prImg').value=''; document.getElementById('prPrev').style.display='none'; prImg=null;
     },function(){ btn.disabled=false; prSay('전송에 실패했습니다.',true); });
   });
@@ -4943,7 +4946,7 @@ var JOY={active:false,x:0,y:0};
   document.getElementById('donCopy').addEventListener('click',copy);
   document.getElementById('donBack').addEventListener('click',function(){ showScreen('lobby'); });
   var btn=document.getElementById('lobbyStart'), d=document.createElement('button');
-  d.className='btn ghost'; d.id='lobbyDonate'; d.style.marginTop='10px'; d.textContent='☕ 개발자 과자 사주기';
+  d.className='btn ghost'; d.id='lobbyDonate'; d.style.marginTop='10px'; d.textContent='개발자 과자 사주기';
   btn.parentNode.insertBefore(d,btn.nextSibling);
   d.addEventListener('click',function(e){ e.stopPropagation(); showScreen('donate'); tab('pay'); copy(); });
 })();
