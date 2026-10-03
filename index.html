@@ -4757,7 +4757,7 @@ var C3S={
  intro:['…우박이 그친 하늘에, 어디선가 아주 작은 날갯짓 소리가 들린다.','???: 브라질의 나비 한 마리가 날갯짓을 하면, 텍사스에 토네이도가 분다고 하지.','???: 시작이 아주 조금만 달라져도, 끝은 전혀 다른 곳에 닿는다. 그것이 카오스다.','(STAGE 1~3 을 돌파하면 나비가 나타납니다. STAGE 1·2 에는 중간 보스가 있고, 스테이지를 넘길 때마다 체력이 35% 회복됩니다. 문제를 푸는 동안에도 게임은 멈추지 않으니 움직이며 푸세요!)'],
  s2:['STAGE 2 · 혼돈의 구역','몹과 나의 위치가 주기적으로 뒤섞이고, 맵의 크기마저 커졌다 작아졌다 한다. 경고가 뜨면 침착하게 — 재배치 직후 0.7초는 무적이다.','(구석에 몰리지 마세요. 중간 보스 「분기의 사도」는 이동할 곳에 원을 먼저 띄웁니다.)'],
  s3:['STAGE 3 · 흐름장의 소용돌이','흐름의 세기가 약해졌다 강해졌다를 되풀이한다. 몹은 엄청나게 몰려오고, 마음대로 움직일 수도 없다.','(흐름이 약할 때 몹을 한곳에 모아 두고, 광역기로 한 번에 쓸어 담으세요. 강할 때는 억지로 거스르지 말고 흐름을 타세요.)'],
- boss:['나비: 나는 로렌츠의 나비. 날갯짓 한 번으로 너의 계산을 흩어 놓겠다.','나비: 탄은 한 발씩만 쏜다. 하지만 그 탄이 버튼을 건드리면, 연결된 발사기가 깨어나 새 탄을 쏘지.','나비: 탄은 너에게 닿기 전에는 사라지지 않는다. 벽에 튕기고, 튕기고, 또 튕기며 돌아온다.','나비: 내 체력은 466920. 파이겐바움이 찾아낸 혼돈의 상수 4.6692… 그 숫자가 나의 심장이다.','(탄이 버튼에 닿으면 같은 색 발사기가 작동합니다. 문제를 맞히면 탄 3발 소멸 + 10초간 보스에게 들어가는 피해 ×3, 틀리면 모든 발사기가 작동합니다. HP 50% 이하에서 광폭화합니다.)'],
+ boss:['나비: 나는 로렌츠의 나비. 날갯짓 한 번으로 너의 계산을 흩어 놓겠다.','나비: 탄은 한 발씩만 쏜다. 하지만 그 탄이 버튼을 건드리면, 연결된 발사기가 깨어나 새 탄을 쏘지.','나비: 탄은 너에게 닿기 전에는 사라지지 않는다. 벽에 튕기고, 튕기고, 또 튕기며 돌아온다.','나비: 내 체력은 466920. 파이겐바움이 찾아낸 혼돈의 상수 4.6692… 그 숫자가 나의 심장이다.','(탄이 버튼에 닿으면 같은 색 발사기가 작동합니다. 문제를 맞히면 탄 3발 소멸 + 10초간 보스에게 들어가는 피해 ×3, 틀리면 모든 발사기가 작동하고 10초간 보스 피해가 ×0.3으로 줄어듭니다. HP 50% 이하에서 광폭화합니다.)'],
  end:['나비: …작은 날갯짓이 이렇게 큰 폭풍이 되어 돌아올 줄이야.','나비: 초기 조건을 아무리 정확히 알아도, 끝을 장담할 수는 없다. 그래도 너는 매번 다른 길을 찾아냈구나.','날개 가루가 흩어지며 하늘이 한 뼘 맑아진다. 손바닥 위에, 아직 흔들리는 작은 날갯짓 하나가 남았다.']
 };
 var SUBS=[
@@ -4840,8 +4840,8 @@ function openQ(title,qo,T,tag){
 function qDone(ok,tag){
   var g=G; if(!g||!g.c3) return; var p=g.player, c=g.c3;
   if(tag==='boss'){
-    if(ok){ var n=Math.min(3,c.bolts.length); c.bolts.splice(0,n); c.buffT=10000; spawnFloat(p.x,p.y-34,'정답 — 탄 '+n+'발 소멸 · 보스 피해 ×3 (10초)'); }
-    else { spawnFloat(p.x,p.y-34,'오답 — 모든 발사기 작동!'); c.pairs.forEach(function(pr){ fire(g,pr,false); }); }
+    if(ok){ var n=Math.min(3,c.bolts.length); c.bolts.splice(0,n); c.buffT=10000; c.debuffT=0; spawnFloat(p.x,p.y-34,'정답 — 탄 '+n+'발 소멸 · 보스 피해 ×3 (10초)'); }
+    else { c.debuffT=10000; c.buffT=0; spawnFloat(p.x,p.y-34,'오답 — 모든 발사기 작동! · 보스 피해 ×0.3 (10초)'); c.pairs.forEach(function(pr){ fire(g,pr,false); }); }
     return;
   }
   if(ok){ p.hp=Math.min(p.maxHp,p.hp+6); spawnFloat(p.x,p.y-34,'정답 +6 HP'); }
@@ -4927,7 +4927,8 @@ spawnBoss=function(){
 var _sbb3=spawnBossBolts;
 spawnBossBolts=function(b){ if(b&&b.bossType==='butterfly') return; return _sbb3(b); };
 var _dm3=damageEnemy;
-damageEnemy=function(e,dmg){ if(e&&G&&e===G.boss&&e.bossType==='butterfly') dmg*=(G.c3&&G.c3.buffT>0)?6:2; _dm3(e,dmg); };
+var C3_HIT_CAP=0.05;   /* 나비 보스: 1타 최대 피해 = 최대체력의 5% (초각성 몇 방에 즉사 방지) */
+damageEnemy=function(e,dmg){ if(e&&G&&e===G.boss&&e.bossType==='butterfly'){ var c3=G.c3; dmg*=(c3&&c3.debuffT>0)?0.3:(c3&&c3.buffT>0)?6:2; var cap=e.maxHp*C3_HIT_CAP; if(dmg>cap) dmg=cap; } _dm3(e,dmg); };
 
 /* ---------- 매 프레임 ---------- */
 /* ---------- 중간보스 ---------- */
@@ -5007,7 +5008,7 @@ function c3Post(g,ms,dt){
   if(ph!==c.ph){ c.ph=ph; document.getElementById('bossName').textContent='나비효과 · 「로렌츠의 나비」 '+(ph+1)+'/2'+(ph===1?' · 광폭화':'');
     if(ph===1){ mkPairs(g,3); c.enr=true; c.btpT=2400; c.btp=null; c.bossT=Math.min(c.bossT,1500);
       banner('— PHASE 2 / 2 —','광폭화','발사기 +3 · 보스 주변 벡터장 · 무작위 순간이동'); } }
-  if(c.buffT>0) c.buffT-=ms;
+  if(c.buffT>0) c.buffT-=ms; if(c.debuffT>0) c.debuffT-=ms;
   /* 광폭화 : 무작위 순간이동 + 보스 주변 벡터장 */
   if(c.enr){
     c.btpT-=ms;
@@ -5173,7 +5174,7 @@ function draw3(){
   if(b&&!b.dead){ drawButterfly(S(b.x,b.y),b,t);
     if(c.buffT>0){ var bs=S(b.x,b.y); ctx.strokeStyle='#ffb300'; ctx.lineWidth=4; ctx.globalAlpha=0.5+0.4*Math.sin(t*14); ctx.beginPath(); ctx.arc(bs.x,bs.y,b.r+16,0,TAU); ctx.stroke(); ctx.globalAlpha=1; }
     ctx.fillStyle=ink; ctx.font='700 13px JetBrains Mono,monospace';
-    ctx.fillText('탄 '+c.bolts.length+'  ·  PHASE '+(c.ph+1)+'/2'+(c.ph===1?' 광폭화':'')+(c.buffT>0?'  ·  피해 ×3 '+(c.buffT/1000).toFixed(1)+'s':'')+(g.challenge?'':'  ·  다음 문제 '+Math.max(0,c.bossQ/1000).toFixed(0)+'s'),VW/2,74); }
+    ctx.fillText('탄 '+c.bolts.length+'  ·  PHASE '+(c.ph+1)+'/2'+(c.ph===1?' 광폭화':'')+(c.buffT>0?'  ·  피해 ×3 '+(c.buffT/1000).toFixed(1)+'s':'')+(c.debuffT>0?'  ·  피해 ×0.3 '+(c.debuffT/1000).toFixed(1)+'s':'')+(g.challenge?'':'  ·  다음 문제 '+Math.max(0,c.bossQ/1000).toFixed(0)+'s'),VW/2,74); }
   ctx.restore();
 }
 var _rd3=render;
