@@ -8117,7 +8117,8 @@ var SA_BEAMS=3, SA_SPAN=10000, SA_SWEEP=2200, SA_CD=16000;   // 빔 3회 · 10�
 var LB_MOB_DMG=50000000;         // 적분 초각성이 잡몹에게 주는 피해 (사실상 즉사)
 var LB_OTHER_FRAC=0.10;          // 다른 스테이지 보스에게는 최대체력의 10%까지만 (4.5만 이하로도 제한)
 var LB_TAKE=1;                   // 보스가 받는 일반·각성 피해 배율 (너무 쉽거나 어려우면 이 값을 조정)
-var LB_IRR_TAKE=0.08;            // 무리수(측도 0) 형태일 때 받는 피해 비율
+var LB_IRR_TAKE=0.5;             // 무리수(측도 0) 형태일 때 받는 피해 비율 (50%)
+var LB_BUFF_MULT=2, LB_BUFF_MS=10000;   // 보스 퀴즈 정답 시: 피해 ×2 가 10초간 지속 (ℚ · 무리수 형태 모두)
 var LB_HIT_CAP=200000;           // 1타 상한
 var LB_CKPT_MS=12000;            // 서버 체크포인트 주기
 var LB_SA_TIME=45000;            // 초각성 문제 제한시간 (게임 정지)
@@ -8133,7 +8134,7 @@ function frac1(v){ return v-Math.floor(v); }
 /* ---------- 스토리 ---------- */
 var LB_STORY={
  intro:['…수직선 위에 점이 가득하다. 분수로 적을 수 있는 점과, 끝내 적을 수 없는 점이.','???: 나는 디리클레. 유리수에서는 1, 무리수에서는 0 — 어디에서도 연속이 아닌 함수.','???: 리만은 나를 적분하지 못했다. 아무리 잘게 쪼개도 위의 합과 아래의 합이 끝내 만나지 않았으니까.','(보스 체력은 1000만. 하루 3번 도전할 수 있고, 죽어도 깎아 둔 체력은 그대로 유지됩니다. 보스는 「유리수 ℚ 형태」일 때만 제대로 피해를 입습니다.)'],
- boss:['디리클레: 1_ℚ(x) — 유리수라면 1, 아니라면 0. 나는 두 모습을 오간다.','디리클레: 분수로 적히는 순간에만 나를 벨 수 있다. 무리수의 나는 측도 0의 틈에 숨는다.','르벡: …하지만 나를 적분한 건 리만이 아니라 나였지. 유리수는 셀 수 있고, 셀 수 있는 집합의 길이는 0이니까.','(HP 66%: 리만 분할 — 아무리 잘게 쪼개도 위험한 칸은 절반 · HP 33%: 칸토어 — 안전지대가 측도 0으로 수렴 · BOSS QUIZ 정답 시 8초간 ℚ 형태 고정)'],
+ boss:['디리클레: 1_ℚ(x) — 유리수라면 1, 아니라면 0. 나는 두 모습을 오간다.','디리클레: 분수로 적히는 순간에만 나를 벨 수 있다. 무리수의 나는 측도 0의 틈에 숨는다.','르벡: …하지만 나를 적분한 건 리만이 아니라 나였지. 유리수는 셀 수 있고, 셀 수 있는 집합의 길이는 0이니까.','(HP 66%: 리만 분할 — 아무리 잘게 쪼개도 위험한 칸은 절반 · HP 33%: 칸토어 — 안전지대가 측도 0으로 수렴 · BOSS QUIZ 정답 시 8초간 ℚ 형태 고정 + 10초간 피해 ×2)'],
  end:['르벡: 측도 0 — 셀 수 있는 점들은 길이를 갖지 못한다. 네가 이긴 것은 그 사이의 틈이었다.','디리클레: …∫ 1_ℚ dμ = 0. 이제 알겠다. 나는 한 번도 무겁지 않았구나.','적분 기호 하나가 손바닥 위에 내려앉는다. 그 끝은 어디까지고 길게 이어져 있다.']
 };
 
@@ -8150,10 +8151,10 @@ var LB={st:null};
 function kstDay(){ return new Date(Date.now()+9*3600*1000).toISOString().slice(0,10); }
 function locKey(){ return 'eclipsilon_lb_local_'+(currentUsername()||'guest'); }
 function locLoad(){ var o=null; try{ o=JSON.parse(localStorage.getItem(locKey())||'null'); }catch(e){} o=o||{};
-  if(o.day!==kstDay()){ o.day=kstDay(); o.used=0; } if(typeof o.hp!=='number') o.hp=LB_HP;
+  if(o.day!==kstDay()){ o.day=kstDay(); o.used=0; o.bonus=0; } if(typeof o.hp!=='number') o.hp=LB_HP; o.bonus=o.bonus|0; o.keyDay=o.keyDay||'';
   o.first=!!o.first; o.sup=!!o.sup; o.clears=o.clears|0; o.pend=o.pend|0; o.used=o.used|0; return o; }
 function locSave(o){ try{ localStorage.setItem(locKey(),JSON.stringify(o)); }catch(e){} }
-function locStatus(o){ return {ok:true,local:true,hp_left:o.hp,max_hp:LB_HP,entries_left:isAdmin()?99:Math.max(0,LB_ENTRIES-o.used),entries_max:LB_ENTRIES,first_cleared:o.first,super:o.sup,clears:o.clears,pending:o.pend}; }
+function locStatus(o){ return {ok:true,local:true,hp_left:o.hp,max_hp:LB_HP,entries_left:isAdmin()?99:Math.max(0,LB_ENTRIES+o.bonus-o.used),entries_max:LB_ENTRIES+o.bonus,first_cleared:o.first,super:o.sup,clears:o.clears,pending:o.pend}; }
 function useLocal(){ return !sb; }
 function rpc(name,args){
   return Promise.resolve(sb.rpc(name,args||{})).then(function(r){
@@ -8170,8 +8171,8 @@ function apiStatus(){
   return rpc('lb_status').then(function(s){ if(s.ok) LB.st=s; return s; });
 }
 function apiEnter(){
-  if(useLocal()){ var o=locLoad(); if(!isAdmin()&&o.used>=LB_ENTRIES) return Promise.resolve({ok:false,error:'오늘의 입장 횟수('+LB_ENTRIES+'회)를 모두 사용했습니다. 한국 시간 0시에 초기화됩니다.'});
-    if(!isAdmin()) o.used++; locSave(o); return Promise.resolve({ok:true,run:'local',hp_left:o.hp,entries_left:isAdmin()?99:Math.max(0,LB_ENTRIES-o.used)}); }
+  if(useLocal()){ var o=locLoad(); if(!isAdmin()&&o.used>=LB_ENTRIES+o.bonus) return Promise.resolve({ok:false,error:'오늘의 입장 횟수('+(LB_ENTRIES+o.bonus)+'회)를 모두 사용했습니다. 한국 시간 0시에 초기화됩니다. (🔑 키로 추가 입장 가능)'});
+    if(!isAdmin()) o.used++; locSave(o); return Promise.resolve({ok:true,run:'local',hp_left:o.hp,entries_left:isAdmin()?99:Math.max(0,LB_ENTRIES+o.bonus-o.used)}); }
   if(!window.__uid) return Promise.resolve(needLogin());
   return rpc('lb_enter');
 }
@@ -8326,7 +8327,7 @@ damageEnemy=function(e,dmg){
     if(G.lb&&e.bossType==='lebesgue'){
       var lb=G.lb;
       if(LB_FIXED) dmg=LB_SUPER_BOSS;
-      else{ dmg*=LB_TAKE*(lb.form==='Q'?1:LB_IRR_TAKE); if(dmg>LB_HIT_CAP) dmg=LB_HIT_CAP; }
+      else{ dmg*=LB_TAKE*(lb.form==='Q'?1:LB_IRR_TAKE)*(lb.buff>0?LB_BUFF_MULT:1); if(dmg>LB_HIT_CAP) dmg=LB_HIT_CAP; }
       dmg=Math.max(0,Math.min(dmg,e.hp)); lb.dealt+=dmg;
     } else if(LB_FIXED){ dmg=Math.min(LB_SUPER_BOSS,(e.maxHp||e.hp)*LB_OTHER_FRAC); }
   }
@@ -8354,7 +8355,7 @@ startRun=function(mode,idx){
   if(isLBStage(st)&&GO&&G&&G.running&&PENDING){ lbInit(G,PENDING); PENDING=null; }
 };
 function lbInit(g,info){
-  g.lb={run:info.run,hp0:Math.max(1,info.hp_left),dealt:0,sent:0,ck:LB_CKPT_MS,ph:-1,form:'Q',formT:2500,qLock:0,iLock:0,tag:'1/2',
+  g.lb={run:info.run,hp0:Math.max(1,info.hp_left),dealt:0,sent:0,ck:LB_CKPT_MS,ph:-1,form:'Q',formT:2500,qLock:0,iLock:0,buff:0,tag:'1/2',
         rainT:2500,spiT:4500,stripT:6000,cantT:9000,minT:2500,quizT:16000,healT:20000,wander:0,irr:0,
         spiral:null,haz:[],q:[],fx:[],entriesLeft:info.entries_left};
   g.intSweeps=[];
@@ -8457,7 +8458,7 @@ function lbQuiz(){
 }
 function lbQuizDone(ok){
   var g=G; if(!g||!g.lb) return; var lb=g.lb, p=g.player;
-  if(ok){ lb.qLock=8000; lb.iLock=0; p.hp=Math.min(p.maxHp,p.hp+6); spawnFloat(p.x,p.y-34,'정답 — 측도 0의 틈이 열린다 (8초간 취약)'); }
+  if(ok){ lb.qLock=8000; lb.iLock=0; lb.buff=LB_BUFF_MS; p.hp=Math.min(p.maxHp,p.hp+6); spawnFloat(p.x,p.y-34,'정답 — 측도 0의 틈이 열린다 · 피해 ×'+LB_BUFF_MULT+' ('+(LB_BUFF_MS/1000)+'초)'); }
   else { lb.iLock=6000; lb.qLock=0; p.hp-=14; spawnFloat(p.x,p.y-34,'오답 −14 · 보스가 무리수의 틈으로 숨는다'); }
 }
 var _csLB=challengeSubmit;
@@ -8502,6 +8503,7 @@ function lbTick(dt){
   if(ph!==lb.ph){ lbPhase(g,b,ph); if(lb.ph===0) setForm(g,b,'Q'); }
 
   /* ℚ ↔ ℝ∖ℚ 형태 전환 */
+  if(lb.buff>0) lb.buff-=ms;
   if(lb.qLock>0){ lb.qLock-=ms; if(lb.form!=='Q') setForm(g,b,'Q'); }
   else if(lb.iLock>0){ lb.iLock-=ms; if(lb.form!=='I') setForm(g,b,'I'); }
   else { lb.formT-=ms; if(lb.formT<=0) setForm(g,b,lb.form==='Q'?'I':'Q'); }
@@ -8572,7 +8574,8 @@ function drawLB(){
       if(lb.flash>0){ ctx.globalAlpha=lb.flash/520*0.6; ctx.strokeStyle=ink; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(o.x,o.y,R+(1-lb.flash/520)*90,0,TAU); ctx.stroke(); ctx.globalAlpha=1; }
       ctx.fillStyle=ink; ctx.font='700 14px JetBrains Mono,monospace';
       var msg=Q?'f(x) = 1  (x ∈ ℚ)  ▶ 취약 — 지금 공격!':'f(x) = 0  (x ∉ ℚ)  ▶ 측도 0 — 피해 '+Math.round(LB_IRR_TAKE*100)+'%';
-      if(lb.qLock>0) msg+='  ·  퀴즈 정답 효과 '+(lb.qLock/1000).toFixed(1)+'s';
+      if(lb.qLock>0) msg+='  ·  ℚ 고정 '+(lb.qLock/1000).toFixed(1)+'s';
+      if(lb.buff>0) msg+='  ·  피해 ×'+LB_BUFF_MULT+' '+(lb.buff/1000).toFixed(1)+'s';
       ctx.fillText(msg,VW/2,74);
     }
     /* 떠오르는 글자 */
@@ -8686,6 +8689,7 @@ renderMenu=function(){
         +[0.1,0.25,0.333,0.5,0.667,0.75,0.9].map(function(v){ return '<circle cx="'+(v*400)+'" cy="7" r="3.2" fill="#7fd6ff"/>'; }).join('')
         +[0.17,0.41,0.59,0.83].map(function(v){ return '<circle cx="'+(v*400)+'" cy="7" r="3.2" fill="none" stroke="#7fd6ff" stroke-opacity=".7"/>'; }).join('')+'</svg>';
       card.onclick=function(){ selectedMode='story'; selectedStageIdx=LB_IDX; showScreen('loadout'); };
+      card.appendChild(lbKeyRow(function(){ renderMenu(); }));
       list.replaceChild(card,old);
       if(LB.st) paintCard(LB.st);
       lbSync(false);
@@ -8727,6 +8731,7 @@ function stagePanel(){
       +'<div>보스 체력 '+fmt(s.hp_left)+' / '+fmt(LB_HP)+' ('+pct.toFixed(1)+'%) · 죽어도 깎은 체력은 유지됩니다</div>'
       +'<div>오늘 남은 입장 <b>'+s.entries_left+' / '+s.entries_max+'</b> (입장 시 1회 차감 · 한국 시간 0시 초기화)</div>'
       +'<div style="opacity:.75">클리어 보상: '+(s.first_cleared?'5만 P':'첫 클리어 50만 P + 적분 초각성 해금 (이후 5만 P)')+'</div>';
+    pn.appendChild(lbKeyRow(function(){ stagePanel(); }));
     paintCard(s);
   });
 }
@@ -8895,6 +8900,32 @@ function sanctionPaint(){
   });
 }
 
+/* ---------- 🔑 추가 입장 키 (일일 입장 횟수가 모자랄 때) ---------- */
+var LB_KEY=(window.ECLIPSILON_CONFIG&&window.ECLIPSILON_CONFIG.lbKey)||'hello', LB_BONUS=3;   // 키 = hello · 키 1회 사용당 +3회 (하루 1번)
+function lbGrant(key){
+  key=String(key||'').trim(); if(!key) return Promise.resolve({ok:false,error:'키 번호를 입력하세요.'});
+  if(useLocal()){
+    if(key!==LB_KEY) return Promise.resolve({ok:false,error:'키 번호가 올바르지 않습니다.'});
+    var o=locLoad(); if(o.keyDay===kstDay()&&!isAdmin()) return Promise.resolve({ok:false,error:'오늘은 이미 키를 사용했습니다. (하루 1회)'});
+    o.bonus+=LB_BONUS; o.keyDay=kstDay(); locSave(o); return Promise.resolve({ok:true,added:LB_BONUS});
+  }
+  if(!window.__uid) return Promise.resolve(needLogin());
+  return rpc('lb_grant_bonus',{p_key:key}).then(function(r){
+    if(r&&!r.ok&&/function|does not exist|schema cache|Could not find/i.test(String(r.error||''))) r.error='서버에 추가 입장 SQL(supabase_lb_bonus.sql)이 아직 적용되지 않았습니다.';
+    return r; });
+}
+function lbKeyRow(after){
+  var w=document.createElement('div'); w.className='lbkey'; w.style.cssText='display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap';
+  w.innerHTML='<span style="font-size:11px;opacity:.85">🔑 추가 입장 키</span><input type="text" data-nokp="1" autocomplete="off" autocapitalize="off" placeholder="KEY" style="flex:1;min-width:90px;padding:6px 8px;font:inherit;font-size:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)"><button type="button" class="btn ghost" style="width:auto;padding:6px 10px;font-size:11px">입력</button>';
+  var inp=w.querySelector('input'), bt=w.querySelector('button');
+  ['click','mousedown','touchstart','keydown','keyup'].forEach(function(ev){ w.addEventListener(ev,function(e){ e.stopPropagation(); }); });
+  function go(){ var v=inp.value; inp.value=''; lbGrant(v).then(function(r){
+    if(r&&r.ok){ toast('🔑 추가 입장 +'+(r.added||LB_BONUS)+'회가 지급되었습니다.'); lbSync(true); if(after) after(); }
+    else toast((r&&r.error)||'키 입력에 실패했습니다.'); }); }
+  bt.onclick=go; inp.addEventListener('keydown',function(e){ if(e.key==='Enter') go(); });
+  return w;
+}
+
 window.__lebesgue={idx:LB_IDX,sync:lbSync,gen:lbQ};
 })();
 
@@ -8913,6 +8944,134 @@ render=function(){
     return of.apply(this,arguments);
   };
   try{ return _rdK.apply(this,arguments); } finally{ delete ctx.fillText; }
+};
+})();
+
+/* ===================== 개념 설명 탭(MATRIX · 르벡 디리클레) · 엡실론의 번제 DLC 이동 + 키 입장 ===================== */
+(function(){
+function $(i){ return document.getElementById(i); }
+function tz(t){ if(window.__eclToast) window.__eclToast(t); else alert(t); }
+var css=document.createElement('style');
+css.textContent='.cptOv{display:none;position:fixed;inset:0;z-index:99995;background:rgba(0,0,0,.6);align-items:center;justify-content:center}'
++'.cptBox{width:min(560px,94vw);max-height:88vh;overflow:auto;background:var(--bg);color:var(--ink);border:2px solid var(--line);padding:16px 18px;text-align:left;line-height:1.65;font-size:13px}'
++'.cptBox h3{margin:0 0 6px;font-size:16px}.cptBox h4{margin:14px 0 4px;font-size:13.5px}.cptBox .tb{width:100%;border-collapse:collapse;font-size:12px;margin:4px 0}'
++'.cptBox .tb td{padding:4px 6px 4px 0;vertical-align:top;border-top:1px solid rgba(128,128,128,.4)}.cptBox .m{font-family:"JetBrains Mono",monospace;font-size:12px;background:var(--card-bg-2);padding:1px 5px}'
++'.cptBox .tip{border:1px dashed var(--ink-faint);padding:8px 10px;margin-top:8px;background:var(--card-bg-2);font-size:12px}'
++'.cptTabs{display:flex;gap:6px;margin:8px 0}.cptTabs button{flex:1;padding:7px 4px;font-size:12px}';
+document.head.appendChild(css);
+
+/* ---------- 개념 설명 내용 ---------- */
+var MXH='<h3>📖 MATRIX · 행렬과 선형변환 개념</h3><div style="opacity:.85">보스 「MATRIX」는 2×2 행렬이 평면을 어떻게 움직이는지를 그대로 공격 패턴으로 씁니다. 격자가 변형되는 모습을 보고 <b>안전한 칸</b>을 찾으세요.</div>'
++'<h4>① 행렬 = 평면을 움직이는 변환</h4>'
++'<span class="m">A = [[a, b],[c, d]]</span> 는 점 (x, y) 를 <span class="m">(ax+by, cx+dy)</span> 로 보냅니다. 첫째 열 (a, c) 는 î(1,0)이, 둘째 열 (b, d) 는 ĵ(0,1)이 도착하는 곳이에요. 두 기저벡터만 알면 평면 전체가 따라옵니다.'
++'<h4>② 행렬식 det = ad − bc</h4>'
++'• |det| = 넓이가 몇 배가 되는가 (단위 정사각형 → 평행사변형의 넓이)<br>• det &lt; 0 이면 방향이 뒤집힘(반사 포함), <b>det = 0 이면 평면이 한 직선(또는 점)으로 납작하게 붕괴</b> → 역행렬 없음<br>• 예) [[2,3],[1,4]] → 2·4 − 3·1 = <b>5</b> &nbsp;/ [[1,2],[2,4]] → 4 − 4 = <b>0</b> (특이행렬)'
++'<h4>③ 대표 변환 표 (초각성 「차원 붕괴」 번호 문제)</h4>'
++'<table class="tb"><tr><td><b>1 항등</b></td><td>[[1,0],[0,1]] — 아무것도 안 변함 (det 1)</td></tr>'
++'<tr><td><b>2 닮음</b></td><td>[[k,0],[0,k]] — 모양 유지, k배 확대 (det k²)</td></tr>'
++'<tr><td><b>3 축 스케일</b></td><td>[[a,0],[0,b]] (a≠b, 양수) — 가로·세로를 다르게 늘림 (det ab)</td></tr>'
++'<tr><td><b>4 회전</b></td><td>[[cosθ, −sinθ],[sinθ, cosθ]] — det 1, 넓이·길이 보존 (예: 90° = [[0,−1],[1,0]])</td></tr>'
++'<tr><td><b>5 전단</b></td><td>[[1,k],[0,1]] 또는 [[1,0],[k,1]] — 기울이기, det 1</td></tr>'
++'<tr><td><b>6 반사</b></td><td>[[1,0],[0,−1]], [[0,1],[1,0]] 등 — det −1</td></tr>'
++'<tr><td><b>7 사영</b></td><td>P² = P. 예) [[1,0],[0,0]], [[½,½],[½,½]] — det 0 이지만 한 직선 위로 눌러 담는 변환</td></tr>'
++'<tr><td><b>8 회전전단</b></td><td>회전과 전단이 섞인 형태. 예) [[0,−1],[1,k]] (det 1)</td></tr>'
++'<tr><td><b>9 특이</b></td><td>det = 0 이고 사영이 아닌 경우. 두 행(열)이 비례함. 예) [[1,3],[1,3]]</td></tr></table>'
++'<div class="tip">판별 순서 팁: ① det 계산 → 0 이면 7(P²=P 인지 확인) 또는 9 &nbsp;② 대각선 외 성분이 0 이면 1·2·3 &nbsp;③ 대각이 1 이고 한 쪽 성분만 있으면 5(전단) &nbsp;④ det=1 이고 대각 성분이 같으면 4(회전) &nbsp;⑤ det=−1 이면 6(반사).</div>'
++'<h4>④ 행렬의 곱 · 역행렬</h4>'
++'• AB 는 「B 를 먼저, 그다음 A」 를 적용하는 합성변환. <b>순서가 중요</b>해서 일반적으로 AB ≠ BA 입니다. det(AB) = det A · det B.<br>• 역행렬: A⁻¹ = (1/det)·[[d, −b],[−c, a]] (det ≠ 0 일 때). A·A⁻¹ = I'
++'<h4>⑤ 가우스-조르당 소거 (STAGE 2)</h4>'
++'행 연산 3가지: <b>R↔R</b>(교환), <b>×k</b>(상수배), <b>R + kR</b>(다른 행의 상수배 더하기). 행 연산으로 [A | I] 를 [I | A⁻¹] 로 만들 수 있고, 한 행이 전부 0 이 되면 det = 0 입니다. 행 연산 중에도 행렬식의 변화는 정해져 있어요: 교환 → 부호 반대, ×k → k배, R+kR → 변화 없음.'
++'<h4>⑥ 극좌표 (PHASE 3)</h4>'
++'(x, y) → (r, θ): <span class="m">r = √(x²+y²)</span>, <span class="m">θ = atan2(y, x)</span>. 반대로 x = r·cosθ, y = r·sinθ. 중적분에서는 넓이 요소가 dx dy = <b>r dr dθ</b> 로 바뀝니다.'
++'<h4>스테이지 공략 팁</h4>'
++'• 입장료 500,000P · 보스 HP 1,010,101 · STAGE 1·2 의 중간보스(î·ĵ 기저, Gauss–Jordan)를 넘길 때마다 체력 35% 회복.<br>• 잡몹이 단단하고 7초마다 대량 소환 → 광역기·초각성이 없으면 버티기 어려워요.<br>• PHASE 1 선형 변환 → 2 회전전단 + det→0(격자가 한 줄로 붕괴) → 3 가우스-조르당 + 극좌표 → 4 모든 변환 동시. 변형이 <b>끝난 위치</b>가 위험하니 변형 중에 안전한 칸으로 미리 이동하세요.';
+var LBH='<h3>📖 르벡 · 디리클레 · 측도와 르벡 적분 개념</h3><div style="opacity:.85">보스 「르벡 · 디리클레」는 <b>측도 0 의 틈</b>에서만 피해가 들어가는 레이드 보스예요. 개념을 알면 공략이 쉬워집니다.</div>'
++'<h4>① 리만 적분 vs 르벡 적분</h4>'
++'• <b>리만</b>: x축(정의역)을 잘게 쪼개 세로 막대를 더함.<br>• <b>르벡</b>: y축(치역)을 나눠 「값 y 를 갖는 x 들의 길이(측도)」 를 곱해 더함 → <span class="m">∫ f dμ = Σ y · μ{ f = y }</span><br>• 함수가 심하게 불연속이어도 적분할 수 있는 것이 르벡 적분의 장점입니다.'
++'<h4>② 측도 (measure) — 길이의 일반화</h4>'
++'• 구간 [a, b] 의 측도 = b − a. <b>한 점의 측도 = 0</b>, 셀 수 있는 점들의 합집합도 측도 0.<br>• 유리수 집합 ℚ 는 셀 수 있으므로 <b>μ(ℚ) = 0</b> → [0,1] 안에서 무리수의 측도는 1.<br>• <b>칸토어 집합 C</b>: 비가산(셀 수 없음)인데도 <b>μ(C) = 0</b>. (매 단계 1/3 씩 제거 → 남은 길이 (2/3)ⁿ → 0)'
++'<h4>③ 디리클레 함수 1<sub>ℚ</sub></h4>'
++'1<sub>ℚ</sub>(x) = 유리수면 1, 무리수면 0. 리만 적분은 <b>불가능</b>(위 합과 아래 합이 안 만남)하지만 르벡 적분은 μ(ℚ)=0 이므로 <span class="m">∫ 1<sub>ℚ</sub> dμ = 0</span> 입니다. 따라서 ∫ (k·1<sub>ℚ</sub> + n·1<sub>[0,m]</sub>) dμ = <b>n·m</b> (구간 안에 [0,m] 이 모두 들어올 때). 칸토어 집합 위에서 100을 주어도 ∫ (k + 100·1<sub>C</sub>) dμ = k × (구간 길이).'
++'<h4>④ 보스 규칙</h4>'
++'• 보스는 「ℚ 형태」 일 때만 제대로 피해를 받고, <b>무리수(측도 0) 형태</b>에서는 피해가 50% 만 들어갑니다. 하루 3회 · 죽어도 깎은 체력은 유지(레이드).<br>• BOSS QUIZ 를 맞히면 8초 동안 ℚ 형태로 고정되고, <b>10초 동안 주는 피해가 2배</b>가 돼요!<br>• HP 66% 리만 분할: 아무리 잘게 쪼개도 위험한 칸이 절반 / HP 33% 칸토어: 안전지대가 측도 0 으로 수렴.'
++'<h4>⑤ 초각성 「르벡 대적분」 문제 유형 공식</h4>'
++'<table class="tb"><tr><td><b>이상적분</b></td><td>∫<sub>1</sub><sup>∞</sup> a/xᵖ dx = a/(p−1)</td></tr>'
++'<tr><td><b>감마함수</b></td><td>∫<sub>0</sub><sup>∞</sup> xⁿe⁻ˣ dx = n! (부분적분 반복)</td></tr>'
++'<tr><td><b>가우스</b></td><td>∫ e<sup>−πu²</sup> du = 1 → ∫ e<sup>−πx²/k²</sup> dx = k</td></tr>'
++'<tr><td><b>가우스 모멘트</b></td><td>∫ x<sup>2n</sup>e<sup>−x²</sup> dx / ∫ e<sup>−x²</sup> dx = (2n−1)!!/2ⁿ (예: n=2 → 3/4)</td></tr>'
++'<tr><td><b>아크탄젠트형</b></td><td>∫<sub>−∞</sub><sup>∞</sup> 1/(x²+a²) dx = π/a</td></tr>'
++'<tr><td><b>중적분(직사각형)</b></td><td>∬ x·y² dA = (a²/2)(b³/3) = a²b³/6</td></tr>'
++'<tr><td><b>2차원 가우스</b></td><td>∬<sub>ℝ²</sub> e<sup>−(x²+y²)/k</sup> dA = kπ</td></tr>'
++'<tr><td><b>극좌표</b></td><td>∬<sub>x²+y²≤R²</sub> √(x²+y²) dA = ∫<sub>0</sub><sup>2π</sup>∫<sub>0</sub><sup>R</sup> r·r dr dθ = 2πR³/3</td></tr>'
++'<tr><td><b>적분 순서 교환</b></td><td>∫<sub>0</sub><sup>a</sup>∫<sub>x</sub><sup>a</sup> 2y dy dx = ∫<sub>0</sub><sup>a</sup>∫<sub>0</sub><sup>y</sup> 2y dx dy = 2a³/3</td></tr>'
++'<tr><td><b>삼중적분</b></td><td>∭<sub>[0,a]×[0,b]×[0,c]</sub> (x+y+z) dV = abc(a+b+c)/2</td></tr></table>'
++'<div class="tip">King property: ∫<sub>0</sub><sup>a</sup> f(x)dx = ∫<sub>0</sub><sup>a</sup> f(a−x)dx. 대칭형 문제에서는 두 식을 더해 f(x)+f(a−x) 가 간단해지는지 확인하세요.</div>';
+var TOP={mx:{h:MXH},lb:{h:LBH}};
+var ov=document.createElement('div'); ov.className='cptOv'; ov.id='cptOv'; document.body.appendChild(ov);
+['keydown','keyup'].forEach(function(e){ ov.addEventListener(e,function(ev){ ev.stopPropagation(); }); });
+function openStudy(k){
+  ov.innerHTML='<div class="cptBox">'+TOP[k].h+'<button class="btn" id="cptClose" style="margin-top:14px;width:100%">닫기</button></div>';
+  ov.style.display='flex'; $('cptClose').onclick=function(){ ov.style.display='none'; };
+}
+ov.addEventListener('click',function(e){ if(e.target===ov) ov.style.display='none'; });
+
+function kindOf(st){ return st&&st.matrix?'mx':(st&&st.lebesgue?'lb':null); }
+var _rlC=renderLoadout;
+renderLoadout=function(){
+  _rlC.apply(this,arguments);
+  var start=$('loadoutStart'); if(!start) return;
+  var st=(selectedMode==='story')?STAGES[selectedStageIdx]:null, k=kindOf(st), b=$('cptLoad');
+  if(k){
+    if(!b){ b=document.createElement('button'); b.id='cptLoad'; b.className='btn ghost'; b.style.cssText='margin-top:10px;width:100%;'; start.parentNode.insertAdjacentElement('afterend',b); }
+    b.textContent=(k==='mx'?'📖 행렬 · 선형변환 개념 설명 보기':'📖 측도 · 르벡 적분 개념 설명 보기'); b.onclick=function(){ openStudy(k); }; b.style.display='';
+  } else if(b) b.style.display='none';
+};
+
+/* ---------- 키 입력창 (엡실론의 번제) ---------- */
+var RG_KEY=(window.ECLIPSILON_CONFIG&&window.ECLIPSILON_CONFIG.rogueKey)||'hello', RG_UNLOCK=false, RG_ALLOW=false;   // 키 = hello · RG_UNLOCK 은 서버 설정(rogue_unlocked)으로 전체 개방 가능
+function rgLoad(cb){
+  if(typeof sb==='undefined'||!sb){ cb&&cb(); return; }
+  sb.from('app_settings').select('key,value').in('key',['rogue_key','rogue_unlocked']).then(function(r){
+    if(r&&!r.error&&r.data) r.data.forEach(function(x){ if(x.key==='rogue_key'&&x.value) RG_KEY=String(x.value); if(x.key==='rogue_unlocked') RG_UNLOCK=(x.value==='1'); });
+    cb&&cb(); },function(){ cb&&cb(); });
+}
+setTimeout(function(){ rgLoad(); },1500);
+var gt=document.createElement('div'); gt.style.cssText='display:none;position:fixed;inset:0;z-index:99990;background:rgba(0,0,0,.6);align-items:center;justify-content:center';
+gt.innerHTML='<div class="gocard" style="width:min(320px,88vw);background:var(--bg)"><div style="font-weight:700;margin-bottom:6px">🔑 엡실론의 번제</div><div style="font-size:12px;opacity:.8;margin-bottom:10px">DLC · 키 번호를 입력해야 입장할 수 있어요.</div><input id="rgKey" class="authinput" type="text" data-nokp="1" autocomplete="off" autocapitalize="off" placeholder="KEY"><div class="mono" id="rgKeyMsg" style="min-height:1.4em;font-size:12px;margin:6px 0"></div><div style="display:flex;gap:8px"><button class="btn" id="rgKeyOk">입장</button><button class="btn ghost" id="rgKeyNo">취소</button></div></div>';
+document.body.appendChild(gt);
+['keydown','keyup'].forEach(function(t){ gt.addEventListener(t,function(e){ e.stopPropagation(); }); });
+function rgEnter(){ RG_ALLOW=true; gt.style.display='none'; startRun('rogue',0); }
+function rgGate(){ rgLoad(function(){ if(RG_UNLOCK||isAdmin()||RG_ALLOW){ rgEnter(); return; }
+  $('rgKey').value=''; $('rgKeyMsg').textContent=''; gt.style.display='flex'; setTimeout(function(){ $('rgKey').focus(); },50); }); }
+function rgOk(){ if($('rgKey').value.trim()===RG_KEY) rgEnter(); else $('rgKeyMsg').textContent='키 번호가 올바르지 않습니다.'; }
+$('rgKeyOk').onclick=rgOk; $('rgKeyNo').onclick=function(){ gt.style.display='none'; };
+$('rgKey').addEventListener('keydown',function(e){ if(e.key==='Enter') rgOk(); if(e.key==='Escape') gt.style.display='none'; });
+var _srRG=startRun;
+startRun=function(mode,idx){
+  if(mode==='rogue'&&!(RG_ALLOW||RG_UNLOCK||isAdmin())){ rgGate(); return; }     // 키 없이는 어떤 경로로도 입장 불가
+  return _srRG.apply(this,arguments);
+};
+
+/* ---------- 메뉴: 번제 카드는 DLC 탭으로 이동 / 카드에 개념 버튼 ---------- */
+var _rmC=renderMenu;
+renderMenu=function(){
+  _rmC.apply(this,arguments);
+  var old=$('rogueCard'); if(old) old.style.display='none';                       // 기본 메뉴에서는 숨김
+  var box=$('dlcList');
+  if(box&&box.style.display==='block'&&!$('rogueDlcCard')){
+    var c=document.createElement('div'); c.className='stagecard'; c.id='rogueDlcCard'; c.style.cssText='cursor:pointer;margin-top:10px';
+    c.innerHTML='<div><div class="mono" style="font-size:11px;opacity:.7">DLC · ROGUELIKE · 🔑 KEY</div><div style="font-size:17px;font-weight:700;margin:4px 0">엡실론의 번제</div><div style="font-size:12px;opacity:.75">아이작식 방 탐험 · 3개 층 · 층 클리어마다 🪙 코인. 키 번호가 있어야 입장할 수 있어요.</div></div>'
+      +'<button type="button" class="btn ghost" style="width:auto;min-width:96px;padding:8px 10px;font-size:12px;white-space:nowrap">🔑 입장 ▶</button>';
+    c.onclick=rgGate; box.appendChild(c);
+  }
+  [['.mxcard','mx'],['.lbcard','lb']].forEach(function(p){
+    var el=document.querySelector(p[0]); if(!el||el.querySelector('.cptBtn')) return;
+    var b=document.createElement('button'); b.type='button'; b.className='btn ghost cptBtn'; b.textContent='📖 개념 설명';
+    b.style.cssText='position:relative;z-index:3;width:auto;padding:6px 10px;font-size:11px;margin-top:10px;background:rgba(0,0,0,.35);color:inherit;border-color:currentColor';
+    b.onclick=function(e){ e.stopPropagation(); e.preventDefault(); openStudy(p[1]); };
+    ['mousedown','touchstart'].forEach(function(ev){ b.addEventListener(ev,function(e){ e.stopPropagation(); }); });
+    el.appendChild(b);
+  });
 };
 })();
 })();
