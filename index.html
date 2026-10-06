@@ -4931,17 +4931,21 @@ function mxTick(g,ms,dt){
 /* ---------- 훅: 출전(입장료) · 소환 · 보스 · 피해 · 프레임 ---------- */
 var _srMx=startRun;
 startRun=function(mode,idx){
-  var st=(mode==='story')?STAGES[idx]:null;
+  var st=(mode==='story')?STAGES[idx]:null, mxFreeRun=false;
   if(st&&st.matrix&&!isAdmin()){
-    if(meta.currency<MX_FEE){ toast('💰 입장료 '+MX_FEE.toLocaleString()+'P가 필요합니다. (보유 '+Math.floor(meta.currency).toLocaleString()+'P)'); showScreen('menu'); return; }
-    meta.currency-=MX_FEE; saveMeta();
+    if((meta.mxFree|0)>0){ meta.mxFree=(meta.mxFree|0)-1; saveMeta(); mxFreeRun=true; }   /* 🔑 키로 얻은 무료 입장권 */
+    else {
+      if(meta.currency<MX_FEE){ toast('💰 입장료 '+MX_FEE.toLocaleString()+'P가 필요합니다. (보유 '+Math.floor(meta.currency).toLocaleString()+'P) — 🔑 키를 입력하면 무료로 입장할 수 있어요.'); showScreen('menu'); return; }
+      meta.currency-=MX_FEE; saveMeta();
+    }
   }
   _srMx(mode,idx);
+  if(mxFreeRun){ if(G&&G.running&&G.stage&&G.stage.matrix) G._mxFree=true; else { meta.mxFree=(meta.mxFree|0)+1; saveMeta(); } }   /* 시작에 실패하면 입장권 환불 */
   if(!st||!st.matrix||!G||!G.running) return;
   var g=G; g.phase='mx'; g.mx={sub:0,base:0,mini:null,miniDead:false,sumT:5000,hz:[],ph:0,trans:0,atkT:3000,bT:2200,ac:0,lbl:null};
   mxWorld(g,MXSUB[0].W,MXSUB[0].H);
   document.getElementById('questBlock').style.display='block'; document.getElementById('bossHud').classList.remove('show');
-  if(!isAdmin()) spawnFloat(g.player.x,g.player.y-70,'입장료 −'+MX_FEE.toLocaleString()+'P');
+  if(!isAdmin()) spawnFloat(g.player.x,g.player.y-70,g._mxFree?'🔑 키 입장 — 입장료 면제':'입장료 −'+MX_FEE.toLocaleString()+'P');
   setTimeout(function(){ if(G===g&&g.running) showStory(MXS.intro); },80);
 };
 var _seMx=spawnEnemy;
@@ -4976,7 +4980,7 @@ endRun=function(win){
     if(win){ var first=!saOwned('matrix'); meta.superAwake=meta.superAwake||{}; meta.saOn=meta.saOn||{}; meta.superAwake.matrix=true; if(meta.saOn.matrix===undefined) meta.saOn.matrix=true; if(!first) meta.currency+=50000; saveMeta();
       g._mxMsg='MATRIX 격파 — 모든 변환이 항등으로 돌아왔다.'+(first?' ✦✦ S등급 초각성 「행렬식 · 차원 붕괴」 획득! (사용 조건: 행렬식 각성 보유 + Lv.6)':' · 재도전 보상 +50,000P');
       if(first) setTimeout(function(){ mxBanner('— S등급 초각성 획득 —','행렬식 · 차원 붕괴','로드아웃의 초각성 칸에서 ON/OFF'); },500); }
-    else g._mxMsg='행렬이 당신을 변환했다… (입장료 '+MX_FEE.toLocaleString()+'P 소모 · 한 방에 몰살시킬 초각성이 필요합니다)'; }
+    else g._mxMsg='행렬이 당신을 변환했다… ('+(g._mxFree?'🔑 키 입장 · 입장료 면제':'입장료 '+MX_FEE.toLocaleString()+'P 소모')+' · 한 방에 몰살시킬 초각성이 필요합니다)'; }
   /* endRun이 여러 번 불려도 기본 문구("다음 스테이지가 열렸습니다")에 덮이지 않도록 매번 다시 적용 */
   var el=document.getElementById('goDescText'), nb=document.getElementById('goNext'); if(nb) nb.style.display='none'; if(el&&g._mxMsg) el.textContent=g._mxMsg;
 };
@@ -5016,7 +5020,7 @@ var _rlMx=renderLoadout;
 renderLoadout=function(){
   _rlMx();
   var ln=document.getElementById('loadoutSelLine'), st=(selectedMode==='story')?STAGES[selectedStageIdx]:null;
-  if(ln&&st&&st.matrix) ln.textContent='EXTREME · MATRIX (입장료 '+MX_FEE.toLocaleString()+'P · 보스 HP '+MX_HP.toLocaleString()+')';
+  if(ln&&st&&st.matrix) ln.textContent='EXTREME · MATRIX ('+((meta.mxFree|0)>0&&!isAdmin()?'🎟 무료 입장권 '+(meta.mxFree|0)+'장 사용':'입장료 '+MX_FEE.toLocaleString()+'P')+' · 보스 HP '+MX_HP.toLocaleString()+')';
   if(!saOwned('matrix')) return;
   var ag=document.getElementById('awakenGrid'); if(!ag) return;
   var sg=document.getElementById('saGrid'); if(!sg){ sg=document.createElement('div'); sg.id='saGrid'; sg.style.marginTop='16px'; ag.insertAdjacentElement('afterend',sg); }
@@ -7971,7 +7975,7 @@ function makeCard(){
   card.innerHTML='<canvas class="mx-cv"></canvas><div class="mx-tag mono">'+((meta.clearedStages&&meta.clearedStages[22])?'✓ CLEAR':'☢ EXTREME')+'</div><div class="mx-b"><div class="mx-w mono">⚠ LINEAR ALGEBRA</div><div class="mx-t">MATRIX</div><div class="mx-s">모든 것은 변환이다. 격자가 휘고, 꺾이고, 무너진다.</div>'
    +'<div class="mx-c mono"><span>입장료 '+MX.fee.toLocaleString()+'P</span><span>HP 1,010,101</span><span>STAGE 1·2 + 보스 4페이즈</span><span>✦✦ 보상: 행렬식 초각성 (S)</span></div></div>';
   card.onclick=function(){
-    if(!isAdmin()&&meta.currency<MX.fee){ if(window.__eclToast) window.__eclToast('💰 입장료 '+MX.fee.toLocaleString()+'P가 필요합니다. (보유 '+Math.floor(meta.currency).toLocaleString()+'P)'); return; }
+    if(!isAdmin()&&meta.currency<MX.fee&&!(meta.mxFree>0)){ if(window.__eclToast) window.__eclToast('💰 입장료 '+MX.fee.toLocaleString()+'P가 필요합니다. (보유 '+Math.floor(meta.currency).toLocaleString()+'P) — 카드 아래 🔑 키를 입력하면 무료 입장!'); return; }
     entryFx(function(){ selectedMode='story'; selectedStageIdx=MX.idx; showScreen('loadout'); });
   };
   if(!cardRAF) cardRAF=requestAnimationFrame(cardLoop);
@@ -8259,12 +8263,52 @@ function lbQ(){
     for(i=0;i<80;i++){ a=RI(1,4); b=RI(1,4); c=RI(1,4); if((a*b*c*(a+b+c))%2===0) break; }
     return {q:'∭_{[0,'+a+']×[0,'+b+']×[0,'+c+']}  (x + y + z) dV = ?',a:a*b*c*(a+b+c)/2}; }
   /* t===9 : 르벡 적분 (테마) */
+  if(Math.random()<0.5) return lbRiemann(false);
   if(Math.random()<0.5){ m=RI(2,9); k=RI(2,9); n=RI(2,6);
     return {q:'1_ℚ = 유리수에서 1, 무리수에서 0.\nf = '+k+'·1_ℚ + '+n+'·1_{[0,'+m+']}  일 때\n르벡 적분 ∫_{[0,'+(m+RI(1,6))+']} f dμ = ?',a:n*m}; }
   k=RI(2,9); m=RI(3,12);
   return {q:'칸토어 집합 C 의 측도는 μ(C) = 0.\n∫_{[0,'+m+']} ('+k+' + 100·1_C) dμ = ?',a:k*m};
 }
+
+/* ---------- 리만 적분 가능한 함수의 르벡 적분 · 상합 / 하합 문제 ---------- */
+function lbRiemann(easy){
+  /* 정답은 구간마다 최댓값/최솟값을 촘촘히 표본해서 직접 계산 → 문제와 답이 어긋날 수 없다 */
+  function sumUL(f,P){ var U=0,L=0,i,j;
+    for(i=1;i<P.length;i++){ var mx=-1e18,mn=1e18; for(j=0;j<=200;j++){ var v=f(P[i-1]+(P[i]-P[i-1])*j/200); if(v>mx) mx=v; if(v<mn) mn=v; } U+=mx*(P[i]-P[i-1]); L+=mn*(P[i]-P[i-1]); }
+    return {U:Math.round(U*1e6)/1e6,L:Math.round(L*1e6)/1e6}; }
+  function unit(n){ var P=[],i; for(i=0;i<=n;i++) P.push(i); return P; }
+  var t=easy?RI(0,1):RI(0,8), n, c, d, k, r, i, pts, f, w;
+  if(t===0){            /* f(x)=x, 단위 분할 */
+    n=easy?RI(3,6):RI(3,9); r=sumUL(function(x){ return x; },unit(n)); var wantU=Math.random()<0.5;
+    return {q:'f(x) = x,  P = {0, 1, 2, …, '+n+'} (단위 분할)\n'+(wantU?'상합 U(f,P)':'하합 L(f,P)')+' = ?',a:wantU?r.U:r.L}; }
+  if(t===1){            /* f(x)=x², 단위 분할 */
+    n=easy?RI(2,4):RI(3,6); r=sumUL(function(x){ return x*x; },unit(n)); var wu=Math.random()<0.5;
+    return {q:'f(x) = x²,  P = {0, 1, 2, …, '+n+'} (단위 분할)\n'+(wu?'상합 U(f,P)':'하합 L(f,P)')+' = ?',a:wu?r.U:r.L}; }
+  if(t===2){            /* 증가 함수 단위 분할: U − L = f(b) − f(a) */
+    n=RI(3,9); c=RI(2,5); d=RI(0,4); f=function(x){ return c*x+d; }; r=sumUL(f,unit(n));
+    return {q:'f(x) = '+c+'x + '+d+',  P = {0, 1, 2, …, '+n+'}\nU(f,P) − L(f,P) = ?\n(힌트: 증가 함수는 U−L = (f(b)−f(a))·Δx)',a:r.U-r.L}; }
+  if(t===3){            /* 불균등 분할 */
+    for(;;){ pts=[0]; k=RI(3,4); for(i=0;i<k;i++) pts.push(pts[pts.length-1]+RI(1,3)); if(pts[pts.length-1]<=9) break; }
+    var sq=Math.random()<0.5; f=sq?function(x){ return x*x; }:function(x){ return x; }; r=sumUL(f,pts); var wu2=Math.random()<0.5;
+    return {q:'f(x) = '+(sq?'x²':'x')+',  P = {'+pts.join(', ')+'}\n'+(wu2?'상합 U(f,P)':'하합 L(f,P)')+' = ?',a:wu2?r.U:r.L}; }
+  if(t===4){            /* U + L */
+    n=RI(3,7); r=sumUL(function(x){ return x; },unit(n));
+    return {q:'f(x) = x,  P = {0, 1, …, '+n+'}\nU(f,P) + L(f,P) = ?',a:r.U+r.L}; }
+  if(t===5){            /* 균등 n분할의 U−L = k²/n */
+    k=RI(2,9); var ds=[]; for(i=2;i<=k*k;i++) if((k*k)%i===0) ds.push(i); n=PK(ds);
+    return {q:'f(x) = x 를 [0,'+k+'] 에서 같은 간격으로 '+n+'등분한 분할 P 에서\nU(f,P) − L(f,P) = ?  (n→∞ 이면 0 으로 가므로 리만 적분 가능)',a:k*k/n}; }
+  if(t===6){            /* 리만 적분 가능 → 르벡 적분 = 리만 적분 : 일차함수 */
+    k=RI(1,4); d=RI(1,6); w=RI(2,6); var cc=2*k;
+    return {q:'f(x) = '+cc+'x + '+d+' 는 리만 적분 가능하다.\n르벡 적분 ∫_{[0,'+w+']} f dμ = ?\n(힌트: 리만 적분 가능이면 두 값이 같다)',a:k*w*w+d*w}; }
+  if(t===7){            /* 바닥함수 = 단순함수 : Σ y · μ{f=y} */
+    n=RI(3,9);
+    return {q:'f(x) = ⌊x⌋ (바닥함수) 는 단순함수.\n∫_{[0,'+n+']} f dμ = Σ y · μ{f = y} = ?',a:n*(n-1)/2}; }
+  /* t===8 : 층(level set) 계단함수 */
+  var a1=RI(1,3), a2=a1+RI(1,3), a3=a2+RI(1,3), v1=RI(1,4), v2=RI(2,6), v3=RI(1,5);
+  return {q:'f = '+v1+' ([0,'+a1+')),  '+v2+' ([ '+a1+','+a2+')),  '+v3+' ([ '+a2+','+a3+'])  인 계단함수.\n르벡 적분 ∫_{[0,'+a3+']} f dμ = Σ y·μ{f=y} = ?',a:v1*a1+v2*(a2-a1)+v3*(a3-a2)};
+}
 function lbQEasy(){
+  if(Math.random()<0.25) return lbRiemann(true);
   var t=RI(0,3), a, k, m;
   if(t===0){ k=RI(2,9); return {q:'∫_{1}^{\\infty}  \\frac{'+k+'}{x²} dx = ?',a:k}; }
   if(t===1){ k=RI(2,9); return {q:'∫_{0}^{\\infty}  '+k+' e^{−x} dx = ?',a:k}; }
@@ -8438,6 +8482,7 @@ function cantor(g){ [1,2,3].forEach(function(L,k){ lbLater(g,k*1750,function(){ 
 
 /* BOSS QUIZ — 문제 풀이 중에도 게임은 멈추지 않는다 */
 function lbQuizGen(){
+  if(Math.random()<0.45) return lbRiemann(false);
   var t=RI(0,6), a, b, k, n, fp, fq, L=81;
   if(t===0){ return {q:'1_ℚ(x) : 유리수에서 1, 무리수에서 0\n1_ℚ(1/2) + 1_ℚ(√2) + 1_ℚ(0.25) + 1_ℚ(π) + 1_ℚ(3) = ?',a:3}; }
   if(t===1){ k=RI(3,12); return {q:'르벡 적분  ∫_{[0,'+k+']} 1_ℚ dμ = ?\n(ℚ 는 가산집합 → 측도 0)',a:0}; }
@@ -8901,22 +8946,22 @@ function sanctionPaint(){
 }
 
 /* ---------- 🔑 추가 입장 키 (일일 입장 횟수가 모자랄 때) ---------- */
-var LB_KEY=(window.ECLIPSILON_CONFIG&&window.ECLIPSILON_CONFIG.lbKey)||'hello', LB_BONUS=3;   // 키 = hello · 키 1회 사용당 +3회 (하루 1번)
+var LB_KEY=(window.ECLIPSILON_CONFIG&&window.ECLIPSILON_CONFIG.lbKey)||'hello', LB_BONUS=1, LB_KEY_DAILY=0;   // 키 1회 입력 = 오늘 입장 +1회 · LB_KEY_DAILY: 하루 키 사용 상한 (0 = 무제한) · 서버 키는 SQL(ecl_keys)에서 관리
 function lbGrant(key){
   key=String(key||'').trim(); if(!key) return Promise.resolve({ok:false,error:'키 번호를 입력하세요.'});
   if(useLocal()){
     if(key!==LB_KEY) return Promise.resolve({ok:false,error:'키 번호가 올바르지 않습니다.'});
-    var o=locLoad(); if(o.keyDay===kstDay()&&!isAdmin()) return Promise.resolve({ok:false,error:'오늘은 이미 키를 사용했습니다. (하루 1회)'});
-    o.bonus+=LB_BONUS; o.keyDay=kstDay(); locSave(o); return Promise.resolve({ok:true,added:LB_BONUS});
+    var o=locLoad(); if(LB_KEY_DAILY>0&&o.keyDay===kstDay()&&(o.keyN|0)>=LB_KEY_DAILY&&!isAdmin()) return Promise.resolve({ok:false,error:'오늘은 키를 더 사용할 수 없습니다. (하루 '+LB_KEY_DAILY+'회)'});
+    o.bonus+=LB_BONUS; o.keyN=(o.keyDay===kstDay()?(o.keyN|0):0)+1; o.keyDay=kstDay(); locSave(o); return Promise.resolve({ok:true,added:LB_BONUS});
   }
   if(!window.__uid) return Promise.resolve(needLogin());
   return rpc('lb_grant_bonus',{p_key:key}).then(function(r){
-    if(r&&!r.ok&&/function|does not exist|schema cache|Could not find/i.test(String(r.error||''))) r.error='서버에 추가 입장 SQL(supabase_lb_bonus.sql)이 아직 적용되지 않았습니다.';
+    if(r&&!r.ok&&/function|does not exist|schema cache|Could not find/i.test(String(r.error||''))) r.error='서버에 키 SQL(eclipsilon_keys_and_bonus.sql)이 아직 적용되지 않았습니다.';
     return r; });
 }
 function lbKeyRow(after){
   var w=document.createElement('div'); w.className='lbkey'; w.style.cssText='display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap';
-  w.innerHTML='<span style="font-size:11px;opacity:.85">🔑 추가 입장 키</span><input type="text" data-nokp="1" autocomplete="off" autocapitalize="off" placeholder="KEY" style="flex:1;min-width:90px;padding:6px 8px;font:inherit;font-size:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)"><button type="button" class="btn ghost" style="width:auto;padding:6px 10px;font-size:11px">입력</button>';
+  w.innerHTML='<span style="font-size:11px;opacity:.85">🔑 키 입력 → 입장 +1회</span><input type="text" data-nokp="1" autocomplete="off" autocapitalize="off" placeholder="KEY" style="flex:1;min-width:90px;padding:6px 8px;font:inherit;font-size:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)"><button type="button" class="btn ghost" style="width:auto;padding:6px 10px;font-size:11px">입력</button>';
   var inp=w.querySelector('input'), bt=w.querySelector('button');
   ['click','mousedown','touchstart','keydown','keyup'].forEach(function(ev){ w.addEventListener(ev,function(e){ e.stopPropagation(); }); });
   function go(){ var v=inp.value; inp.value=''; lbGrant(v).then(function(r){
@@ -8926,7 +8971,7 @@ function lbKeyRow(after){
   return w;
 }
 
-window.__lebesgue={idx:LB_IDX,sync:lbSync,gen:lbQ};
+window.__lebesgue={idx:LB_IDX,sync:lbSync,gen:lbQ,quiz:lbQuizGen,riemann:function(e){ return lbRiemann(!!e); },grant:lbGrant,status:apiStatus};
 })();
 
 })();
@@ -8992,6 +9037,8 @@ var LBH='<h3>📖 르벡 · 디리클레 · 측도와 르벡 적분 개념</h3><
 +'• 구간 [a, b] 의 측도 = b − a. <b>한 점의 측도 = 0</b>, 셀 수 있는 점들의 합집합도 측도 0.<br>• 유리수 집합 ℚ 는 셀 수 있으므로 <b>μ(ℚ) = 0</b> → [0,1] 안에서 무리수의 측도는 1.<br>• <b>칸토어 집합 C</b>: 비가산(셀 수 없음)인데도 <b>μ(C) = 0</b>. (매 단계 1/3 씩 제거 → 남은 길이 (2/3)ⁿ → 0)'
 +'<h4>③ 디리클레 함수 1<sub>ℚ</sub></h4>'
 +'1<sub>ℚ</sub>(x) = 유리수면 1, 무리수면 0. 리만 적분은 <b>불가능</b>(위 합과 아래 합이 안 만남)하지만 르벡 적분은 μ(ℚ)=0 이므로 <span class="m">∫ 1<sub>ℚ</sub> dμ = 0</span> 입니다. 따라서 ∫ (k·1<sub>ℚ</sub> + n·1<sub>[0,m]</sub>) dμ = <b>n·m</b> (구간 안에 [0,m] 이 모두 들어올 때). 칸토어 집합 위에서 100을 주어도 ∫ (k + 100·1<sub>C</sub>) dμ = k × (구간 길이).'
++'<h4>③-2 상합 · 하합 — 리만 적분 가능한 함수의 르벡 적분</h4>'
++'• 분할 P : a = x₀ &lt; x₁ &lt; … &lt; xₙ = b.  구간마다 M<sub>i</sub> = sup f, m<sub>i</sub> = inf f<br>• <b>상합</b> U(f,P) = Σ M<sub>i</sub>Δx<sub>i</sub>,  <b>하합</b> L(f,P) = Σ m<sub>i</sub>Δx<sub>i</sub>  (항상 L ≤ U)<br>• sup L = inf U 이면 <b>리만 적분 가능</b> → 그 값이 적분값이고, 이때 <b>르벡 적분 값도 똑같습니다</b>.<br>• 증가 함수는 구간의 오른쪽 끝이 sup, 왼쪽 끝이 inf. 예) f(x)=x², [0,3] 단위 분할 → U = 1+4+9 = <b>14</b>, L = 0+1+4 = <b>5</b><br>• 증가·감소 함수는 균등 n분할에서 U − L = (f(b)−f(a))·(b−a)/n → n→∞ 이면 0.<br>• 디리클레 함수는 모든 구간에서 sup=1, inf=0 이라 U − L = b − a 가 줄지 않음 → 리만 불가능, 르벡 적분은 0.<br>• 계단(단순)함수의 르벡 적분 = Σ (값) × (그 값을 갖는 집합의 길이). 예) ⌊x⌋ on [0,n] = 0+1+…+(n−1)'
 +'<h4>④ 보스 규칙</h4>'
 +'• 보스는 「ℚ 형태」 일 때만 제대로 피해를 받고, <b>무리수(측도 0) 형태</b>에서는 피해가 50% 만 들어갑니다. 하루 3회 · 죽어도 깎은 체력은 유지(레이드).<br>• BOSS QUIZ 를 맞히면 8초 동안 ℚ 형태로 고정되고, <b>10초 동안 주는 피해가 2배</b>가 돼요!<br>• HP 66% 리만 분할: 아무리 잘게 쪼개도 위험한 칸이 절반 / HP 33% 칸토어: 안전지대가 측도 0 으로 수렴.'
 +'<h4>⑤ 초각성 「르벡 대적분」 문제 유형 공식</h4>'
@@ -9037,13 +9084,23 @@ function rgLoad(cb){
 }
 setTimeout(function(){ rgLoad(); },1500);
 var gt=document.createElement('div'); gt.style.cssText='display:none;position:fixed;inset:0;z-index:99990;background:rgba(0,0,0,.6);align-items:center;justify-content:center';
-gt.innerHTML='<div class="gocard" style="width:min(320px,88vw);background:var(--bg)"><div style="font-weight:700;margin-bottom:6px">🔑 엡실론의 번제</div><div style="font-size:12px;opacity:.8;margin-bottom:10px">DLC · 키 번호를 입력해야 입장할 수 있어요.</div><input id="rgKey" class="authinput" type="text" data-nokp="1" autocomplete="off" autocapitalize="off" placeholder="KEY"><div class="mono" id="rgKeyMsg" style="min-height:1.4em;font-size:12px;margin:6px 0"></div><div style="display:flex;gap:8px"><button class="btn" id="rgKeyOk">입장</button><button class="btn ghost" id="rgKeyNo">취소</button></div></div>';
+gt.innerHTML='<div class="gocard" style="width:min(320px,88vw);background:var(--bg)"><div style="font-weight:700;margin-bottom:6px">🔑 엡실론의 번제</div><div style="font-size:12px;opacity:.8;margin-bottom:10px">DLC · 키 번호를 입력해야 입장할 수 있어요. (키 1회 입력 = 1판)</div><input id="rgKey" class="authinput" type="text" data-nokp="1" autocomplete="off" autocapitalize="off" placeholder="KEY"><div class="mono" id="rgKeyMsg" style="min-height:1.4em;font-size:12px;margin:6px 0"></div><div style="display:flex;gap:8px"><button class="btn" id="rgKeyOk">입장</button><button class="btn ghost" id="rgKeyNo">취소</button></div></div>';
 document.body.appendChild(gt);
 ['keydown','keyup'].forEach(function(t){ gt.addEventListener(t,function(e){ e.stopPropagation(); }); });
-function rgEnter(){ RG_ALLOW=true; gt.style.display='none'; startRun('rogue',0); }
+function rgEnter(){ RG_ALLOW=true; gt.style.display='none'; try{ startRun('rogue',0); } finally{ RG_ALLOW=false; } }   /* 키 1회 = 1판 : 입장 직후 허용 해제 */
 function rgGate(){ rgLoad(function(){ if(RG_UNLOCK||isAdmin()||RG_ALLOW){ rgEnter(); return; }
   $('rgKey').value=''; $('rgKeyMsg').textContent=''; gt.style.display='flex'; setTimeout(function(){ $('rgKey').focus(); },50); }); }
-function rgOk(){ if($('rgKey').value.trim()===RG_KEY) rgEnter(); else $('rgKeyMsg').textContent='키 번호가 올바르지 않습니다.'; }
+function rgCheck(v,cb){   /* 서버(redeem_key)에서 검증 — SQL 이 없거나 로그아웃 상태면 예전 방식(클라이언트 비교)으로 */
+  if(typeof sb!=='undefined'&&sb&&window.__uid){
+    try{ Promise.resolve(sb.rpc('redeem_key',{p_kind:'rg',p_key:v})).then(function(r){
+      var d=(r&&!r.error)?r.data:null;
+      if(d&&typeof d==='object'&&typeof d.ok==='boolean'){ cb(d.ok,d.error); return; }
+      cb(v===RG_KEY); },function(){ cb(v===RG_KEY); }); }catch(e){ cb(v===RG_KEY); }
+  } else cb(v===RG_KEY);
+}
+function rgOk(){ var v=$('rgKey').value.trim(); if(!v){ $('rgKeyMsg').textContent='키 번호를 입력하세요.'; return; }
+  rgCheck(v,function(ok,err){ if(ok) rgEnter(); else $('rgKeyMsg').textContent=err||'키 번호가 올바르지 않습니다.'; }); }
+window.__rgTest={ok:function(){ return rgOk(); },check:rgCheck};
 $('rgKeyOk').onclick=rgOk; $('rgKeyNo').onclick=function(){ gt.style.display='none'; };
 $('rgKey').addEventListener('keydown',function(e){ if(e.key==='Enter') rgOk(); if(e.key==='Escape') gt.style.display='none'; });
 var _srRG=startRun;
@@ -9073,6 +9130,104 @@ renderMenu=function(){
     el.appendChild(b);
   });
 };
+})();
+
+/* ===================== 🔑 키 시스템 : MATRIX 무료 입장권 · 관리자 키 관리 · 르벡 추가 입장 조정 ===================== */
+(function(){
+function $(i){ return document.getElementById(i); }
+function tz(t){ if(window.__eclToast) window.__eclToast(t); else alert(t); }
+var MX_KEY=(window.ECLIPSILON_CONFIG&&window.ECLIPSILON_CONFIG.mxKey)||'hello';   // 서버(ecl_keys)가 있으면 서버 키가 우선
+var _nmK=normalizeMeta;
+normalizeMeta=function(m){ var d=_nmK(m), v=Number(m&&m.mxFree); d.mxFree=(isFinite(v)&&v>0)?Math.min(99,Math.floor(v)):0; return d; };
+try{ var rawK=JSON.parse(localStorage.getItem(storageKeyFor(currentUsername()))||'null'); if(rawK&&isFinite(Number(rawK.mxFree))) meta.mxFree=Math.max(0,Math.min(99,Math.floor(Number(rawK.mxFree)))); }catch(e){}
+if(!(meta.mxFree>0)) meta.mxFree=0;
+
+function checkKey(kind,key,localKey,cb){
+  if(typeof sb!=='undefined'&&sb&&window.__uid){
+    try{ Promise.resolve(sb.rpc('redeem_key',{p_kind:kind,p_key:key})).then(function(r){
+      var d=(r&&!r.error)?r.data:null;
+      if(d&&typeof d==='object'&&typeof d.ok==='boolean'){ cb(d.ok,d.error); return; }
+      cb(key===localKey); },function(){ cb(key===localKey); }); }catch(e){ cb(key===localKey); }
+  } else cb(key===localKey);
+}
+function mxGrant(key,cb){
+  key=String(key||'').trim(); if(!key){ cb({ok:false,error:'키 번호를 입력하세요.'}); return; }
+  checkKey('mx',key,MX_KEY,function(ok,err){
+    if(!ok){ cb({ok:false,error:err||'키 번호가 올바르지 않습니다.'}); return; }
+    meta.mxFree=Math.min(99,(meta.mxFree|0)+1); saveMeta(); cb({ok:true,n:meta.mxFree}); });
+}
+function keyRow(label,onGo,tkText){
+  var w=document.createElement('div'); w.className='eclkey'; w.style.cssText='display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap;position:relative;z-index:3';
+  w.innerHTML='<span style="font-size:11px;opacity:.9">'+label+'</span><span class="tk" style="font-size:11px;font-weight:700"></span><input type="text" data-nokp="1" autocomplete="off" autocapitalize="off" placeholder="KEY" style="flex:1;min-width:90px;padding:6px 8px;font:inherit;font-size:12px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink)"><button type="button" class="btn ghost" style="width:auto;padding:6px 10px;font-size:11px">입력</button>';
+  var inp=w.querySelector('input'), bt=w.querySelector('button');
+  ['click','mousedown','touchstart','keydown','keyup'].forEach(function(ev){ w.addEventListener(ev,function(e){ e.stopPropagation(); }); });
+  function go(){ var v=inp.value; inp.value=''; onGo(v,w); }
+  bt.onclick=go; inp.addEventListener('keydown',function(e){ if(e.key==='Enter') go(); });
+  w.refresh=function(){ var t=w.querySelector('.tk'); if(t) t.textContent=tkText?tkText():''; };
+  w.refresh(); return w;
+}
+function mxKeyRow(){
+  return keyRow('🔑 키 입력 → 무료 입장권',function(v,w){
+    mxGrant(v,function(r){
+      if(r.ok){ tz('🔑 MATRIX 무료 입장권 +1 (보유 '+r.n+'장) — 다음 입장 때 입장료 500,000P가 면제됩니다.'); document.querySelectorAll('.eclkey').forEach(function(x){ if(x.refresh) x.refresh(); }); try{ if(document.getElementById('screen-loadout').classList.contains('active')) renderLoadout(); }catch(e){} }
+      else tz(r.error||'키 입력에 실패했습니다.'); });
+  },function(){ return (meta.mxFree|0)>0?' 🎟 '+(meta.mxFree|0)+'장 보유':''; });
+}
+
+var _rmK=renderMenu;
+renderMenu=function(){
+  _rmK.apply(this,arguments);
+  var c=document.querySelector('.mxcard'); if(c&&!c.querySelector('.eclkey')) c.appendChild(mxKeyRow());
+  else if(c){ var k=c.querySelector('.eclkey'); if(k&&k.refresh) k.refresh(); }
+  try{ keyAdminRender(); }catch(e){ if(window.console) console.error('[keyAdmin]',e); }
+};
+var _rlK=renderLoadout;
+renderLoadout=function(){
+  _rlK.apply(this,arguments);
+  var start=$('loadoutStart'); if(!start) return;
+  var st=(selectedMode==='story')?STAGES[selectedStageIdx]:null, b=$('mxKeyLoad');
+  if(st&&st.matrix&&!isAdmin()){
+    if(!b){ b=mxKeyRow(); b.id='mxKeyLoad'; start.parentNode.insertAdjacentElement('afterend',b); }
+    b.style.display=''; if(b.refresh) b.refresh();
+  } else if(b) b.style.display='none';
+};
+
+/* ---------- 관리자 : 키 확인/변경 · 르벡 추가 입장 조정 ---------- */
+var kaData=null, kaBusy=false;
+function srpc(name,args){ return Promise.resolve(sb.rpc(name,args||{})).then(function(r){ if(r&&r.error) return {ok:false,error:r.error.message}; var d=r&&r.data; return (d===null||d===undefined)?{ok:false,error:'서버 응답이 비어 있습니다. eclipsilon_keys_and_bonus.sql 을 적용했는지 확인하세요.'}:d; },function(e){ return {ok:false,error:String(e&&e.message||e)}; }); }
+var KA_KINDS=[['lb','르벡 · 디리클레 (키 1회 = 오늘 입장 +1)'],['mx','MATRIX (키 1회 = 무료 입장권 1장)'],['rg','엡실론의 번제 (키 1회 = 1판)']];
+function keyAdminRender(){
+  var box=$('keyAdminBox'), am=$('adminMenuBox');
+  if(!isAdmin()||!am||typeof sb==='undefined'||!sb||!window.__uid){ if(box) box.remove(); return; }
+  if(!box){
+    box=document.createElement('div'); box.id='keyAdminBox'; box.className='mono'; box.style.cssText='border:2px dashed var(--line);padding:10px 12px;margin-bottom:12px;font-size:12px';
+    var anchor=$('sanctionBox')||am; anchor.insertAdjacentElement('afterend',box);
+    box.innerHTML='<b>🔑 키 관리</b> <span style="opacity:.6">— 서버에만 저장 (플레이어는 볼 수 없음)</span><div id="kaRows" style="margin:6px 0"></div>'
+      +'<div style="border-top:1px solid var(--grid);padding-top:8px"><b>르벡 추가 입장 조정</b> <span style="opacity:.6">— 오늘 한도 = 3 + 추가 (0 이면 3회로 복귀)</span>'
+      +'<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><input type="text" id="kaName" placeholder="닉네임" autocomplete="off" style="flex:1;min-width:110px;padding:6px 8px;font:inherit;border:1.5px solid var(--line);background:transparent;color:var(--ink)">'
+      +'<input type="number" id="kaN" min="0" max="50" value="0" style="width:70px;padding:6px 8px;font:inherit;border:1.5px solid var(--line);background:transparent;color:var(--ink)"><button type="button" class="btn ghost" id="kaSet" style="width:auto;padding:6px 12px;font-size:12px">적용</button></div></div>'
+      +'<div id="kaMsg" style="margin-top:6px;min-height:1.2em"></div>';
+    ['keydown','keyup'].forEach(function(ev){ box.addEventListener(ev,function(e){ e.stopPropagation(); }); });
+    $('kaSet').onclick=function(){
+      var nm=$('kaName').value.trim(), n=parseInt($('kaN').value,10); if(!nm){ $('kaMsg').textContent='닉네임을 입력하세요.'; return; } if(!(n>=0)) n=0;
+      srpc('admin_lb_set_bonus',{p_name:nm,p_bonus:n}).then(function(r){ $('kaMsg').textContent=r.ok?('「'+nm+'」 추가 입장을 '+n+'회로 설정했습니다. (오늘 한도 '+(3+n)+'회)'):('실패: '+r.error); });
+    };
+  }
+  if(kaData===null&&!kaBusy){ kaBusy=true; srpc('admin_get_keys').then(function(r){ kaBusy=false; kaData=(r&&r.ok&&r.keys)?r.keys:{}; if(!(r&&r.ok)) $('kaMsg').textContent='키를 불러오지 못했습니다: '+((r&&r.error)||''); kaPaint(); }); }
+  else kaPaint();
+}
+function kaPaint(){
+  var rows=$('kaRows'); if(!rows||kaData===null) return; rows.innerHTML='';
+  KA_KINDS.forEach(function(k){
+    var row=document.createElement('div'); row.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 0';
+    var info=document.createElement('div'); info.textContent=k[1]+' : '+(kaData[k[0]]!==undefined?kaData[k[0]]:'(미설정)');
+    var bt=document.createElement('button'); bt.type='button'; bt.className='btn ghost'; bt.style.cssText='width:auto;padding:5px 10px;font-size:11px'; bt.textContent='변경';
+    bt.onclick=function(){ var nk=prompt('새 키 번호 ('+k[1]+')',kaData[k[0]]||''); if(nk===null||!nk.trim()) return;
+      srpc('admin_set_key',{p_kind:k[0],p_secret:nk.trim()}).then(function(r){ if(r.ok){ kaData[k[0]]=nk.trim(); kaPaint(); $('kaMsg').textContent='키를 변경했습니다.'; } else $('kaMsg').textContent='실패: '+r.error; }); };
+    row.appendChild(info); row.appendChild(bt); rows.appendChild(row);
+  });
+}
+window.__keys={mxGrant:mxGrant,checkKey:checkKey};
 })();
 })();
 })();
