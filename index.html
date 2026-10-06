@@ -4767,7 +4767,7 @@ var SA_IDS=['add','mul'];
   window.__saShow=function(){ window.__saRender(); showScreen('sagacha'); };
 })();
 function saShow(){ window.__saShow(); }
-var SA_EASY_PRICE=100000, SA_EASY_PRICES={integral:300000};
+var SA_EASY_PRICE=100000, SA_EASY_PRICES={integral:300000,linear:150000};
 function saEasyPrice(id){ return SA_EASY_PRICES[id]||SA_EASY_PRICE; }
 var _rgSA=renderGacha;
 renderGacha=function(){
@@ -7215,18 +7215,32 @@ showScreen('lobby');
 (function(){
 var RG={
   floors:3,                                // 층(=스테이지) 수 — 층마다 방 5/6/7개의 아이작식 맵
-  hp:100,
-  hpMul:[1,2.0,3.4], dmgMul:[1,1.25,1.6], spdMul:[1,1.08,1.16],
-  roomStep:0.10,                           // 같은 층에서 방을 깰 때마다 적 체력 +10%
-  cnt:[3,5,7],                             // 층별 방 하나의 기본 적 수 (+0~2)
+  hp:80,                                   // 강화 없는 기본 체력 (코인 강화 '기초 체력' 1레벨당 +12)
+  hpMul:[1.8,4.6,9.5], dmgMul:[1.4,2.1,3.0], spdMul:[1.04,1.14,1.26],     // ★ 난이도: 강화 없이는 절반도 깨기 어렵게
+  roomStep:0.16,                           // 같은 층에서 방을 깰 때마다 적 체력 +16%
+  cnt:[4,6,8],                             // 층별 방 하나의 기본 적 수 (+0~2)
   mix:[[45,25,0,30,0],[25,20,15,25,15],[15,15,20,25,25]],   // 층별 적 구성 % (점 / 선분 / 다각형 / 총알 원거리 / 레이저 원거리)
-  bossHp:[700,1800,3400], bossDmg:[0.8,1.0,1.25],   // bossHp 는 기준값 — 실제 체력은 빌드 화력에 맞춰 startBoss 에서 자동 산정
-  bossAtk:[1.3,1.2,1.1],                   // 보스 공격 주기 배율 (방이 작아져서 탄막을 느슨하게)
-  bossT:[36,44,52], bossLo:[450,1300,2800], bossHi:[1000,3000,6500],   // 목표 처치 시간(초) · 체력 하한/상한
-  roomHeal:0.20, bossHeal:0.60,
+  bossHp:[700,1800,3400], bossDmg:[1.1,1.5,2.0],   // bossHp 는 기준값 — 실제 체력은 '강화 전' 빌드 화력에 맞춰 startBoss 에서 자동 산정
+  bossAtk:[1.15,1.05,0.95],                // 보스 공격 주기 배율 (작을수록 탄막이 촘촘)
+  bossT:[60,80,100], bossLo:[800,2400,5200], bossHi:[1800,5600,12000],   // 강화 없는 빌드 기준 목표 처치 시간(초) · 체력 하한/상한
+  roomHeal:0.12, bossHeal:0.40,
   maxLv:6, slots:4,
-  coinFloor:100, coinWin:100               // 층 클리어 코인 / 올클리어 보너스 (올클리어 1회 = 400, 일차방정식 초각성 = 800)
+  coinRoom:[4,10,20], coinBoss:[50,150,320], coinWin:400   // ★ 방 클리어 코인 / 보스 코인 (층이 깊을수록 많이) / 올클리어 보너스 (올클리어 1회 ≈ 1,100 코인)
 };
+/* ---------- 코인 영구 강화 (코인 상점에서 구매 · meta.rgUp 에 레벨 저장 · 번제에서만 적용) ---------- */
+var RGUP=[
+ {id:'sd',grp:'스킬',name:'스킬 위력',max:10,cost:[30,45,65,90,120,160,210,270,340,420],eff:function(l){ return '모든 스킬 피해 +'+(l*10)+'%'; }},
+ {id:'sc',grp:'스킬',name:'스킬 가속',max:8,cost:[40,60,90,130,180,240,320,420],eff:function(l){ return '스킬 쿨타임 −'+(l*3)+'%'; }},
+ {id:'sw',grp:'스킬',name:'집중력',max:5,cost:[20,30,45,65,90],eff:function(l){ return '문제 제한 시간 +'+(l*6)+'%'; }},
+ {id:'sl',grp:'스킬',name:'시작 스킬 단련',max:3,cost:[100,250,500],eff:function(l){ return '시작 스킬 Lv.'+(1+l); }},
+ {id:'rm',grp:'유물',name:'유물 증폭',max:8,cost:[50,75,110,160,230,320,430,560],eff:function(l){ return '패시브 유물(아이템) 효과 +'+(l*10)+'%'; }},
+ {id:'rs',grp:'유물',name:'시작 유물',max:3,cost:[80,200,450],eff:function(l){ return '시작할 때 COMMON 유물 '+l+'개 지급'; }},
+ {id:'hp',grp:'생존',name:'기초 체력',max:8,cost:[25,35,50,70,95,125,160,200],eff:function(l){ return '최대 체력 +'+(l*12); }},
+ {id:'rv',grp:'생존',name:'귀류법의 서',max:2,cost:[300,900],eff:function(l){ return '시작할 때 부활 '+l+'회'; }},
+ {id:'lk',grp:'생존',name:'표본 확장',max:1,cost:[600],eff:function(l){ return l?'보상 선택지 +1':'보상 선택지 +1 (최대 +3지선다→4지선다)'; }}
+];
+function metaUp(){ var o=(typeof meta!=='undefined'&&meta&&meta.rgUp)||{}, r={}; RGUP.forEach(function(d){ var v=Math.floor(Number(o[d.id])||0); r[d.id]=Math.max(0,Math.min(d.max,v)); }); return r; }
+window.__rgUp={defs:RGUP,lv:metaUp,cfg:RG};
 var TM={E:1,D:1,C:1.2,B:1.45,A:1.8,S:2.4,SS:3.0,SSS:3.8};    // 번제 전용 등급별 위력 배율 (상위 스킬일수록 실제로 강하다)
 var TIERS=['E','D','C','B','A','S','SS','SSS'];     // L · LL · TRUE 등급과 secret 스킬은 풀에서 제외
 var FLOOR_NAME=['고정점의 들판','혼돈의 구역','발산하는 심연'];
@@ -7265,12 +7279,33 @@ var ITEMS=[
  {id:'six', r:2,name:'완전수 6',     desc:'피해 +10% · 쿨타임 −10% · 이동 +10% · 최대 체력 +10', fn:function(g){ var m=g.rg.m,p=g.player; m.dmg+=0.10; m.cd=Math.max(0.45,m.cd*0.9); m.spd=Math.min(0.5,m.spd+0.1); p.maxHp+=10; p.hp+=10; }}
 ];
 
+/* ---------- 유물 증폭 · 시작 유물 (코인 강화) ---------- */
+function applyItem(g,it){
+  var amp=0.10*metaUp().rm, m=g.rg.m, p=g.player, b={}, hp0=p.maxHp, K=['dmg','cd','win','spd','dash','hit','healCast','killHeal','roomHeal','explode','cascade'];
+  K.forEach(function(k){ b[k]=m[k]; });
+  it.fn(g);
+  if(amp<=0) return;
+  K.forEach(function(k){
+    var d=m[k]-b[k]; if(Math.abs(d)<1e-9) return;
+    if(k==='cd'||k==='dash'){ if(b[k]>0&&m[k]<b[k]) m[k]=Math.max(k==='cd'?0.45:0.42,b[k]*Math.pow(m[k]/b[k],1+amp)); }
+    else if(d>0){ var cap={spd:0.6,hit:3.5,win:2.0}[k], nv=b[k]+d*(1+amp); m[k]=cap?Math.min(cap,nv):nv; }
+  });
+  if(p.maxHp>hp0){ var ex=Math.round((p.maxHp-hp0)*amp); p.maxHp+=ex; p.hp+=ex; }
+}
+function giveStartRelics(g){
+  var n=metaUp().rs, i;
+  for(i=0;i<n;i++){ var pool=ITEMS.filter(function(it){ return it.r===0&&(!it.ok||it.ok(g)); }); if(!pool.length) break; var it=PK(pool); applyItem(g,it); g.rg.items.push(it.name); }
+}
+function ampNote(){ var l=metaUp().rm; return l>0?' · 유물 증폭 +'+(l*10)+'%':''; }
+
 /* ---------- 상태 ---------- */
 function newState(){
-  return { floor:1, state:'pick', kind:'start', cards:[], replacing:null, afterBoss:false,
+  var u=metaUp(), s={ floor:1, state:'pick', kind:'start', cards:[], replacing:null, afterBoss:false,
     isBoss:false, total:0, spawned:0, elites:0, introT:0, cleared:0, bossesKilled:0, items:[], hud:'', _boom:false,
     coins:0, fc:0, nc:0, cur:null, map:null, rooms:null, start:null,
-    m:{dmg:1,cd:1,win:1,spd:0,dash:1,hit:1,healCast:0,killHeal:0,roomHeal:0,explode:0,cascade:0,extra:0,revive:0} };
+    m:{dmg:1,cd:1,win:1,spd:0,dash:1,hit:1,healCast:0,killHeal:0,roomHeal:0,explode:0,cascade:0,extra:0,revive:0,mdmg:1,mcd:1} };
+  s.m.mdmg=1+0.10*u.sd; s.m.mcd=Math.max(0.5,1-0.03*u.sc); s.m.win=Math.min(1.8,1+0.06*u.sw); s.m.revive=u.rv; s.m.extra=Math.min(1,u.lk);
+  return s;
 }
 function newSlot(sk,lv){ return {id:'rg:'+sk.id, sk:sk, lv:lv, cdLeft:0}; }   // id 를 바꿔서 각성/초각성 판정에 걸리지 않게 한다
 function stageFor(floor,boss){
@@ -7289,7 +7324,7 @@ function bestGet(){ try{ return JSON.parse(localStorage.getItem('rg_best')||'{}'
 function bestSet(o){ try{ localStorage.setItem('rg_best',JSON.stringify(o)); }catch(e){} }
 function paintCard(){
   var c=$('rogueCard'); if(!c) return; var b=bestGet(), d=c.querySelector('.st-desc'); if(!d) return;
-  d.textContent='아이작식 방 탐험 · 3개 층 · 층을 클리어할 때마다 🪙 코인 획득 (각성 · L스킬 · 궁극기 사용 불가)'+(b.fl?(' · 최고 '+(b.win?'CLEAR':('F'+b.fl))+(b.clears?(' · 클리어 '+b.clears+'회'):'')):'');
+  d.textContent='아이작식 방 탐험 · 3개 층 · 강화 없이는 절반도 깨기 어려운 난이도 · 🪙 코인(깊은 층일수록 ↑)으로 스킬·유물 영구 강화 (각성 · L스킬 · 궁극기 사용 불가)'+(b.fl?(' · 최고 '+(b.win?'CLEAR':('F'+b.fl))+(b.clears?(' · 클리어 '+b.clears+'회'):'')):'');
 }
 
 /* ---------- 보상 카드 ---------- */
@@ -7307,7 +7342,7 @@ function rollSkill(g,boss,onlyLow){
   var x=Math.random()*sum, tier=tiers[0];
   for(i=0;i<tiers.length;i++){ x-=T[tiers[i]]; if(x<=0){ tier=tiers[i]; break; } }
   var sk=PK(pool.filter(function(s){ return s.tier===tier; }));
-  return cardSkill(sk, onlyLow?1:LM(g.rg.floor+(boss?1:0),1,RG.maxLv));
+  return cardSkill(sk, onlyLow?LM(1+metaUp().sl,1,RG.maxLv):LM(g.rg.floor+(boss?1:0),1,RG.maxLv));
 }
 function rollLv(g){
   var c=[]; g.loadout.forEach(function(s,i){ if(s&&s.lv<RG.maxLv) c.push(i); });
@@ -7319,7 +7354,7 @@ function rollItem(g,boss){
   var pool=ITEMS.filter(function(it){ return it.r===r && (!it.ok||it.ok(g)); });
   if(!pool.length) pool=ITEMS.filter(function(it){ return !it.ok||it.ok(g); });
   var it=PK(pool);
-  return {key:'it:'+it.id, kind:'item', cls:'r'+it.r, tag:RN[it.r]+' ITEM', name:it.name, desc:it.desc, it:it};
+  return {key:'it:'+it.id, kind:'item', cls:'r'+it.r, tag:RN[it.r]+' ITEM', name:it.name, desc:it.desc+ampNote(), it:it};
 }
 function rollCard(g,boss){
   var hasLv=g.loadout.some(function(s){ return s&&s.lv<RG.maxLv; });
@@ -7406,14 +7441,14 @@ function choose(i){
     g.loadout[empty]=newSlot(c.sk,c.lv);
   } else if(c.kind==='lv'){ var s=g.loadout[c.idx]; if(s) s.lv=Math.min(RG.maxLv,s.lv+1); }
   else if(c.kind==='heal'){ var p=g.player; p.hp=Math.min(p.maxHp,p.hp+p.maxHp*0.5); }
-  else if(c.kind==='item'){ c.it.fn(g); R.items.push(c.it.name); }
+  else if(c.kind==='item'){ applyItem(g,c.it); R.items.push(c.it.name); }
   done();
 }
 function done(){
   var g=G, R=g.rg;
   if(g.player.hp>g.player.maxHp) g.player.hp=g.player.maxHp;
   renderSkillBar(); ovClose();
-  if(R.kind==='start'){ startFloor(); return; }
+  if(R.kind==='start'){ giveStartRelics(g); startFloor(); return; }
   if(R.afterBoss){ R.afterBoss=false; R.floor++; startFloor(); return; }
   R.state='explore';
 }
@@ -7614,8 +7649,10 @@ function spawnRoom(){
   R.spawned=R.total;
 }
 function estDps(g){                                // 현재 빌드의 단일 대상 화력 추정 (등급 위력 · 레벨 · 아이템 · 쿨감 반영)
+  var mm=g.rg&&g.rg.m, a0=mm&&mm.mdmg, b0=mm&&mm.mcd; if(mm){ mm.mdmg=1; mm.mcd=1; }   // 코인 강화분은 보스 체력 산정에서 제외
   var sum=0, pm=petMultiplier();
   g.loadout.forEach(function(s){ if(!s) return; sum+=(TM[s.sk.tier]||1)*s.sk.baseDmg*dmgMult(s.lv)*pm/(s.sk.cd*cdMult(s.lv)/1000); });
+  if(mm){ mm.mdmg=a0; mm.mcd=b0; }
   return sum;
 }
 function startBoss(){
@@ -7635,13 +7672,14 @@ function roomClear(){
   p.hp=Math.min(p.maxHp,p.hp+p.maxHp*(RG.roomHeal+R.m.roomHeal));
   g.projectiles=[];
   var qb=$('questBlock'); if(qb) qb.style.display='none';
-  spawnFloat(p.x,p.y-50,'문이 열렸다');
+  var cg=RG.coinRoom[R.floor-1]||0; meta.coins=(meta.coins||0)+cg; R.coins+=cg; saveMeta();
+  spawnFloat(p.x,p.y-50,'문이 열렸다  🪙 +'+cg);
   openReward('room');
 }
 function bossCleared(){
   var g=G, R=g.rg, p=g.player;
   R.bossesKilled++; R.cleared++; R.cur.cleared=true; R.beams=[];
-  var gain=RG.coinFloor+(R.floor>=RG.floors?RG.coinWin:0);
+  var gain=(RG.coinBoss[R.floor-1]||0)+(R.floor>=RG.floors?RG.coinWin:0);
   meta.coins=(meta.coins||0)+gain; R.coins+=gain; saveMeta();
   spawnFloat(p.x,p.y-60,'🪙 +'+gain+' 코인');
   g.boss=null; g.phase='endless'; g.enemies=[]; g.projectiles=[]; g.cx=null;
@@ -7739,15 +7777,16 @@ function finish(win){
   var g=G, R=g.rg; R.state='end';
   var reward=R.cleared*12+R.bossesKilled*50+(win?300:0);
   meta.currency+=reward; g.earned=reward;
-  var b=bestGet();
+  var b=bestGet(), firstClr=!!win&&!(meta.rgClear||b.win);
   b.fl=Math.max(b.fl||0,R.floor);
-  if(win){ b.clears=(b.clears||0)+1; b.win=true; }
+  if(win){ b.clears=(b.clears||0)+1; b.win=true; meta.rgClear=true; }
   bestSet(b); saveMeta();
   ovClose();
   _erR.call(null,win);
   var t=$('goTitleText'), d=$('goDescText'), nb=$('goNext');
   if(t) t.textContent=win?'ROGUE CLEAR':'RUN OVER';
-  if(d) d.textContent=(win?'모든 층을 돌파했습니다! ':(R.floor+'층 '+(R.cur&&R.cur.type==='boss'?'BOSS':'전투방')+'에서 쓰러졌습니다. '))+'클리어한 방 '+R.cleared+'개 · 아이템 '+R.items.length+'개 · 보상 +'+reward+'P · 🪙 코인 +'+R.coins+' (보유 '+(meta.coins||0)+')';
+  if(d) d.textContent=(win?'모든 층을 돌파했습니다! ':(R.floor+'층 '+(R.cur&&R.cur.type==='boss'?'BOSS':'전투방')+'에서 쓰러졌습니다. '))+'클리어한 방 '+R.cleared+'개 · 아이템 '+R.items.length+'개 · 보상 +'+reward+'P · 🪙 코인 +'+R.coins+' (보유 '+(meta.coins||0)+') · 코인 상점에서 영구 강화!'+(firstClr?' · 🔓 일차방정식 초각성 구매 해금 (코인 상점 · 150,000P)':'');
+  if(firstClr&&window.__eclToast) window.__eclToast('🔓 엡실론의 번제 클리어 보상 — 일차방정식 초각성을 코인 상점에서 구매할 수 있습니다! (150,000P)');
   if(nb) nb.style.display='none';
 }
 
@@ -7761,7 +7800,7 @@ startRun=function(mode,idx){
   g.blessing=null; g.monty=null;                       // 가호 사용 불가
   g.loadout=[null,null,null,null];
   g.phase='endless'; g.rg=newState(); g.stage=stageFor(1,false); g.stageIdx=0;
-  g.player.maxHp=RG.hp; g.player.hp=RG.hp;
+  var hpU=RG.hp+12*metaUp().hp; g.player.maxHp=hpU; g.player.hp=hpU;
   g.spawnTimer=1e9; g.eliteTimer=1e9; g.currencyTick=1e9;
   document.body.classList.add('rg-on');
   resizeCanvas(); geom(); g.player.x=RW/2; g.player.y=RH/2;
@@ -7772,9 +7811,9 @@ startRun=function(mode,idx){
 };
 // 2) 피해 · 쿨타임 · 제한시간 보정
 var _pmR=petMultiplier;
-petMultiplier=function(){ var v=_pmR.apply(this,arguments); return isRg()?v*G.rg.m.dmg*(G.rg._tm||1):v; };
+petMultiplier=function(){ var v=_pmR.apply(this,arguments); return isRg()?v*G.rg.m.dmg*(G.rg.m.mdmg||1)*(G.rg._tm||1):v; };
 var _cmR=cdMult;
-cdMult=function(lv){ var v=_cmR.apply(this,arguments); return isRg()?v*G.rg.m.cd:v; };
+cdMult=function(lv){ var v=_cmR.apply(this,arguments); return isRg()?v*G.rg.m.cd*(G.rg.m.mcd||1):v; };
 var _wmR=winMult;
 winMult=function(lv){ var v=_wmR.apply(this,arguments); return isRg()?v*G.rg.m.win:v; };
 // 3) 보상 화면 중 스킬 발동 금지
@@ -8002,12 +8041,14 @@ renderMenu=function(){
 
 /* ===================== 코인 상점 · 새 재화(코인) — 엡실론의 번제에서 층을 클리어할 때마다 획득 ===================== */
 (function(){
-var COIN_SA=800, COIN_SKIN=200;     // 올클리어 1회 = 400코인 → 초각성은 2회분 · 스킨은 2개 층(=200)
+var COIN_SA=800, COIN_SKIN=200, SA_PRICE=150000, SA_EASY=150000;     // 일차방정식 초각성 150,000P (번제 올클리어 후 구매 가능) · 쉬운 문제 150,000P · 스킨 200코인
+function rgCleared(){ var b={}; try{ b=JSON.parse(localStorage.getItem('rg_best')||'{}')||{}; }catch(e){} return !!(meta.rgClear||b.win||isAdmin()); }
 function $(i){ return document.getElementById(i); }
 var _nmC=normalizeMeta;
-normalizeMeta=function(m){ var d=_nmC(m); d.coins=Number.isFinite(m&&m.coins)?m.coins:0; d.cshop=(m&&m.cshop&&typeof m.cshop==='object')?m.cshop:{}; d.goldColor=!(m&&m.goldColor===false); return d; };
-try{ var raw=JSON.parse(localStorage.getItem(storageKeyFor(currentUsername()))||'null'); if(raw){ meta.coins=Number.isFinite(raw.coins)?raw.coins:0; meta.cshop=(raw.cshop&&typeof raw.cshop==='object')?raw.cshop:{}; meta.goldColor=!(raw.goldColor===false); } }catch(e){}
-if(!Number.isFinite(meta.coins)) meta.coins=0; if(!meta.cshop) meta.cshop={};
+normalizeMeta=function(m){ var d=_nmC(m); d.coins=Number.isFinite(m&&m.coins)?m.coins:0; d.cshop=(m&&m.cshop&&typeof m.cshop==='object')?m.cshop:{}; d.goldColor=!(m&&m.goldColor===false);
+  var ru={}, rr=(m&&m.rgUp&&typeof m.rgUp==='object')?m.rgUp:{}; Object.keys(rr).forEach(function(k){ var v=Math.floor(Number(rr[k])); if(v>0&&v<=50) ru[k]=v; }); d.rgUp=ru; d.rgClear=!!(m&&m.rgClear); return d; };
+try{ var raw=JSON.parse(localStorage.getItem(storageKeyFor(currentUsername()))||'null'); if(raw){ meta.coins=Number.isFinite(raw.coins)?raw.coins:0; meta.cshop=(raw.cshop&&typeof raw.cshop==='object')?raw.cshop:{}; meta.goldColor=!(raw.goldColor===false); var ru0={}, rr0=(raw.rgUp&&typeof raw.rgUp==='object')?raw.rgUp:{}; Object.keys(rr0).forEach(function(k){ var v=Math.floor(Number(rr0[k])); if(v>0&&v<=50) ru0[k]=v; }); meta.rgUp=ru0; meta.rgClear=!!raw.rgClear; } }catch(e){}
+if(!Number.isFinite(meta.coins)) meta.coins=0; if(!meta.cshop) meta.cshop={}; if(!meta.rgUp||typeof meta.rgUp!=='object') meta.rgUp={};
 
 var st=document.createElement('style');
 st.textContent='#coinShop{display:none;position:fixed;inset:0;z-index:99995;background:rgba(0,0,0,.55);align-items:flex-start;justify-content:center;overflow:auto;padding:18px 10px}'
@@ -8019,7 +8060,8 @@ st.textContent='#coinShop{display:none;position:fixed;inset:0;z-index:99995;back
 +'#coinShop .csEq{font-family:"JetBrains Mono",monospace;font-size:12px;border:1px dashed var(--ink-faint);padding:8px;background:var(--card-bg-2)}'
 +'#coinShop canvas{width:100%;height:92px;display:block;border:1px solid var(--line)}'
 +'#coinShop .csB{padding:10px;border:1.5px solid var(--line);background:var(--ink);color:var(--bg);font-weight:600;cursor:pointer;font-family:inherit}'
-+'#coinShop .csB.g{background:transparent;color:var(--ink)}#coinShop .csB[disabled]{opacity:.4;cursor:not-allowed}';
++'#coinShop .csB.g{background:transparent;color:var(--ink)}#coinShop .csB[disabled]{opacity:.4;cursor:not-allowed}'
++'#coinShop .csUp{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--grid)}#coinShop .csUp .csB{white-space:nowrap;min-width:74px}';
 document.head.appendChild(st);
 var shop=document.createElement('div'); shop.id='coinShop'; document.body.appendChild(shop);
 
@@ -8036,14 +8078,29 @@ function drawEps(cv){
   c.font='bold 84px "JetBrains Mono", monospace'; c.textAlign='center'; c.textBaseline='middle';
   c.fillStyle='#e8b923'; c.shadowColor='rgba(255,190,40,.9)'; c.shadowBlur=22; c.fillText('ε',w/2,h/2+4); c.shadowBlur=0;
 }
+function upgradesHTML(co){
+  var R=window.__rgUp; if(!R) return ''; var lv=R.lv();
+  var h='<div class="csCard"><div class="csN">⚔ 엡실론의 번제 강화 (영구)</div><div class="csD">코인으로 스킬과 유물을 영구 강화합니다. 강화는 <b>엡실론의 번제에서만</b> 적용돼요.</div>';
+  R.defs.forEach(function(d){ var l=lv[d.id], mx=l>=d.max, c=mx?0:d.cost[l];
+    h+='<div class="csUp"><div><b>'+d.grp+' · '+d.name+'</b> <span class="mono" style="font-size:11px">Lv.'+l+'/'+d.max+'</span><div class="csD">'+d.eff(l)+(mx?'':' → <b>'+d.eff(l+1)+'</b>')+'</div></div>'
+      +(mx?'<button class="csB g" disabled>MAX</button>':'<button class="csB" data-a="up:'+d.id+'"'+(co<c?' disabled':'')+'>'+c+' 🪙</button>')+'</div>'; });
+  return h+'</div>';
+}
+function buyUp(id){
+  var R=window.__rgUp; if(!R) return; var d=R.defs.filter(function(x){ return x.id===id; })[0]; if(!d) return;
+  if(!meta.rgUp||typeof meta.rgUp!=='object') meta.rgUp={}; var l=R.lv()[id]; if(l>=d.max) return; var c=d.cost[l]; if((meta.coins||0)<c) return;
+  meta.coins-=c; meta.rgUp[id]=l+1; toast('⚔ '+d.name+' Lv.'+(l+1)+' — '+d.eff(l+1));
+}
 function paintShop(){
-  var co=meta.coins||0, sa=hasSA(), okSA=otherSA(), sk=!!meta.cshop.skin, skOn=!!meta.cshop.skinOn;
+  var co=meta.coins||0, sa=hasSA(), okSA=otherSA(), sk=!!meta.cshop.skin, skOn=!!meta.cshop.skinOn, clr=rgCleared(), easy=!!(meta.saEasy&&meta.saEasy.linear);
   shop.innerHTML='<div class="csBox"><div class="csTop"><div style="font-size:18px;font-weight:700">🪙 코인 상점</div><div class="mono" style="font-size:12.5px">보유 <b style="font-size:15px">'+co+'</b> 코인</div></div>'
-  +'<p class="csNote">코인은 <b>엡실론의 번제</b>에서 층(스테이지)을 클리어할 때마다 +'+100+', 3층 올클리어 시 +'+100+' 추가로 쌓입니다. (올클리어 1회 = 400 · 도중에 쓰러져도 이미 번 코인은 유지)</p>'
-  +'<div class="csCard"><div class="csN">✦✦ 일차방정식 초각성 — '+COIN_SA+' 🪙</div>'
-  +'<div class="csD">「일차방정식」 스킬이 초각성으로 변합니다. 미지수가 양쪽에 있는 방정식을 20초 안에 풀면, 풀이 x를 따라 직선 빔이 교차하며 폭발합니다. 일반 모드에서만 적용되며, 엡실론의 번제에서는 모든 스킬이 기본 형태로만 쓰입니다.</div>'
-  +'<div class="csD">🔒 구매 조건: 다른 초각성 스킬을 1개 이상 보유 <b>'+(okSA?'✓ 충족':'✗ 미충족')+'</b></div><div class="csEq">3x + 7 = 2x + 15 &nbsp;→&nbsp; x = 8</div>'
-  +(sa?'<button class="csB g" data-a="saTog">초각성 '+(saOn()?'ON ✦✦ (눌러서 끄기)':'OFF (눌러서 켜기)')+'</button>':'<button class="csB" data-a="saBuy"'+((co<COIN_SA||!okSA)?' disabled':'')+'>구매 ('+COIN_SA+' 🪙)'+(!okSA?' · 조건 미충족':(co<COIN_SA?' · 코인 부족':''))+'</button>')+'</div>'
+  +'<p class="csNote">코인은 <b>엡실론의 번제</b>에서 방을 클리어할 때마다, 층 보스를 쓰러뜨릴 때마다 쌓입니다. <b>깊은 층일수록 훨씬 많이</b> 줍니다 (방: 1층 +4 · 2층 +10 · 3층 +20 / 보스: +50 · +150 · +320 / 올클리어 +400 = 1회 약 1,100). 도중에 쓰러져도 이미 번 코인은 유지돼요. 번제는 <b>강화 없이는 절반도 깨기 어렵게</b> 만들어져 있습니다.</p>'
+  +upgradesHTML(co)
+  +'<div class="csCard"><div class="csN">✦✦ 일차방정식 초각성 — '+SA_PRICE.toLocaleString()+' P</div>'
+  +'<div class="csD">「일차방정식」 스킬이 초각성 「교점 폭발」로 변합니다. 괄호 · 분수 · 소수 · 연립 · 미지 계수까지 나오는 <b>아주 어려운</b> 방정식을 40초 안에 풀면 직선 빔이 교차하며 폭발합니다. 일반 모드에서만 적용되며, 엡실론의 번제에서는 모든 스킬이 기본 형태로만 쓰입니다.</div>'
+  +'<div class="csD">🔒 구매 해금: 엡실론의 번제 <b>올클리어</b> '+(clr?'✓ 달성 — 구매 가능':'✗ 미달성')+' · 보유 포인트 <b>'+Math.floor(meta.currency).toLocaleString()+' P</b></div><div class="csEq">3(2x − 5) − 4(x + 3) = 3x − 35 &nbsp;→&nbsp; x = 8</div>'
+  +(sa?'<button class="csB g" data-a="saTog">초각성 '+(saOn()?'ON ✦✦ (눌러서 끄기)':'OFF (눌러서 켜기)')+'</button>':'<button class="csB" data-a="saBuy"'+((!clr||(!isAdmin()&&meta.currency<SA_PRICE))?' disabled':'')+'>구매 ('+SA_PRICE.toLocaleString()+' P)'+(!clr?' · 번제 올클리어 필요':(!isAdmin()&&meta.currency<SA_PRICE?' · 포인트 부족':''))+'</button>')
+  +(sa?'<div class="csD" style="margin-top:10px">🧩 <b>쉬운 문제</b> — 문제가 「ax + b = c」 한 줄짜리 기본 일차방정식으로 바뀝니다.</div>'+(easy?'<button class="csB g" disabled>쉬운 문제 구매 완료 ✓</button>':'<button class="csB" data-a="saEasy"'+((!isAdmin()&&meta.currency<SA_EASY)?' disabled':'')+'>쉬운 문제 구매 ('+SA_EASY.toLocaleString()+' P)'+((!isAdmin()&&meta.currency<SA_EASY)?' · 포인트 부족':'')+'</button>'):'')+'</div>'
   +'<div class="csCard"><div class="csN">👑 황금 ε 스킨 — '+COIN_SKIN+' 🪙</div><canvas id="csCv"></canvas>'
   +'<div class="csD">나의 ε가 황금빛 오라를 두릅니다. 랭킹 · 계정 이름의 닉네임이 <b style="color:#f5c518">노란색</b>으로 표시됩니다 (설정에서 ON/OFF).</div>'
   +(sk?'<button class="csB g" data-a="skTog">'+(skOn?'장착 중 (눌러서 해제)':'장착하기')+'</button>':'<button class="csB" data-a="skBuy"'+(co<COIN_SKIN?' disabled':'')+'>구매 ('+COIN_SKIN+' 🪙)'+(co<COIN_SKIN?' · 코인 부족':'')+'</button>')+'</div>'
@@ -8053,11 +8110,13 @@ function paintShop(){
 }
 function act(a){
   if(a==='close'){ shop.style.display='none'; return; }
-  if(a==='saBuy'&&!hasSA()&&otherSA()&&meta.coins>=COIN_SA){ meta.coins-=COIN_SA; if(!meta.superAwake) meta.superAwake={}; if(!meta.saOn) meta.saOn={}; meta.superAwake.linear=true; meta.saOn.linear=true; toast('✦✦ 일차방정식 초각성 획득!'); }
+  if(a==='saBuy'&&!hasSA()&&rgCleared()&&(isAdmin()||meta.currency>=SA_PRICE)){ if(!isAdmin()) meta.currency-=SA_PRICE; if(!meta.superAwake) meta.superAwake={}; if(!meta.saOn) meta.saOn={}; meta.superAwake.linear=true; meta.saOn.linear=true; toast('✦✦ 일차방정식 초각성 획득!'); }
+  else if(a==='saEasy'&&hasSA()&&!(meta.saEasy&&meta.saEasy.linear)&&(isAdmin()||meta.currency>=SA_EASY)){ if(!isAdmin()) meta.currency-=SA_EASY; meta.saEasy=meta.saEasy||{}; meta.saEasy.linear=true; toast('🧩 일차방정식 초각성 — 쉬운 문제로 변경됐어요.'); }
+  else if(a.indexOf('up:')===0){ buyUp(a.slice(3)); }
   else if(a==='saTog'){ if(!meta.saOn) meta.saOn={}; meta.saOn.linear=!saOn(); }
   else if(a==='skBuy'&&!meta.cshop.skin&&meta.coins>=COIN_SKIN){ meta.coins-=COIN_SKIN; meta.cshop.skin=true; meta.cshop.skinOn=true; toast('👑 황금 ε 스킨 구매 · 장착 완료'); goldSync(true); }
   else if(a==='skTog'){ meta.cshop.skinOn=!meta.cshop.skinOn; }
-  saveMeta(); paintMenu(); paintShop();
+  saveMeta(); paintMenu(); try{ renderMenu(); }catch(e){} paintShop();
 }
 function open(){ paintShop(); shop.style.display='flex'; }
 shop.addEventListener('click',function(e){ if(e.target===shop) shop.style.display='none'; });
@@ -9228,6 +9287,89 @@ function kaPaint(){
   });
 }
 window.__keys={mxGrant:mxGrant,checkKey:checkKey};
+})();
+
+/* ---------- ✦✦ 일차방정식 초각성 「교점 폭발」 : 아주 어려운 문제 (괄호 · 분수 · 소수 · 연립 · 미지 계수) ---------- */
+(function(){
+var X=window.__eclX; if(!X||!X.SA||!X.SA.linear) return;
+var LIN_TIME=40000;
+function tz(t){ if(window.__eclToast) window.__eclToast(t); else alert(t); }
+function ri(a,b){ return a+Math.floor(Math.random()*(b-a+1)); }
+function pk(a){ return a[Math.floor(Math.random()*a.length)]; }
+function nz(a,b,ex){ var v,t=0; do{ v=ri(a,b); t++; }while((v===0||(ex&&ex.indexOf(v)>=0))&&t<200); return v; }
+function gcd(a,b){ a=Math.abs(a); b=Math.abs(b); while(b){ var t=a%b; a=b; b=t; } return a||1; }
+function N(k){ return k<0?'−'+(-k):''+k; }
+function T(k,v){ return k===1?v:(k===-1?'−'+v:N(k)+v); }
+function C(b){ return b===0?'':(b<0?' − '+(-b):' + '+b); }
+function lin(a,b){ return a===0?N(b):T(a,'x')+C(b); }
+function P(k,e){ return k===1?'('+e+')':(k===-1?'−('+e+')':N(k)+'('+e+')'); }
+function sub(k,e){ return k<0?' + '+P(-k,e):' − '+P(k,e); }
+function dec(t){ return (t<0?'−':'')+(Math.abs(t)/10).toFixed(1); }
+function decLin(A,B){ return (A<0?'−':'')+(Math.abs(A)/10).toFixed(1)+'x'+(B===0?'':(B<0?' − ':' + ')+(Math.abs(B)/10).toFixed(1)); }
+function linHard(){
+  var t=ri(0,5), x, a, b, c, d, e, f, p, q, r, i, k, k1, k2, den, num, g;
+  if(t===0){            /* 양변에 큰 계수 */
+    x=nz(-15,15); a=ri(7,19); c=nz(-9,9,[a]); b=ri(-150,150); d=b+(a-c)*x;
+    return {q:lin(a,b)+' = '+lin(c,d)+'\nx = ?',a:x}; }
+  if(t===1){            /* 이중 괄호 */
+    for(i=0;i<200;i++){ x=nz(-12,12); p=pk([2,3,4,5]); a=nz(2,7); b=nz(-9,9); q=pk([2,3,4]); c=nz(2,6); d=ri(1,9); r=nz(-4,5); e=ri(-9,9);
+      if(p*a-q*c!==r) break; }
+    var s0=(p*(a*x-b)-q*(c*x+d))-r*(x-e);
+    return {q:P(p,lin(a,-b))+sub(q,lin(c,d))+' = '+P(r,lin(1,-e))+C(s0)+'\nx = ?',a:x}; }
+  if(t===2){            /* 분수 */
+    for(i=0;i<300;i++){ x=nz(-12,12); k1=pk([1,2,3]); k2=pk([1,2,3]); p=pk([2,3,4,5,6]); q=pk([2,3,4,5,6]); a=ri(-9,9); b=ri(-9,9);
+      if(p!==q&&k1*q!==k2*p) break; }
+    num=(k1*x+a)*q-(k2*x+b)*p; den=p*q; g=gcd(num,den); num/=g; den/=g;
+    var rhs=(den===1)?N(num):((num<0?'−':'')+'\\frac{'+Math.abs(num)+'}{'+den+'}');
+    return {q:'\\frac{'+lin(k1,a)+'}{'+p+'} − \\frac{'+lin(k2,b)+'}{'+q+'} = '+rhs+'\nx = ?',a:x}; }
+  if(t===3){            /* 연립방정식 */
+    for(i=0;i<300;i++){ x=nz(-9,9); var y=nz(-9,9); a=nz(1,6); b=nz(-6,6); c=nz(-6,6); d=nz(-6,6); if(a*d-b*c!==0) break; }
+    e=a*x+b*y; f=c*x+d*y; var y2=y, w=pk(['x + y','x − y','x · y']);
+    var ans=(w==='x + y')?x+y:(w==='x − y'?x-y:x*y);
+    function two(u,v){ return T(u,'x')+(v<0?' − '+T(-v,'y'):' + '+T(v,'y')); }
+    return {q:'연립방정식\n'+two(a,b)+' = '+N(e)+'\n'+two(c,d)+' = '+N(f)+'\n'+w+' = ?',a:ans}; }
+  if(t===4){            /* 미지 계수 */
+    var a0=nz(-8,12); var m=nz(1,6); c=nz(-5,5); k=nz(-9,9); b=ri(-20,20); d=(a0-m-c)*k+b;
+    return {q:'(a '+(m<0?'+ '+(-m):'− '+m)+')x'+C(b)+' = '+lin(c,d)+'\n의 해가 x = '+N(k)+' 일 때,  a = ?',a:a0}; }
+  /* t===5 : 소수 계수 */
+  for(i=0;i<300;i++){ x=nz(-12,12); var A=nz(-15,15), Cc=nz(-15,15); if(A!==Cc) break; }
+  var B=ri(-30,30), D=B+(A-Cc)*x;
+  return {q:decLin(A,B)+' = '+decLin(Cc,D)+'\nx = ?',a:x};
+}
+X.SA.linear.gen=linHard;
+window.__linHard=linHard;
+
+/* 제한 시간 40초 (문제가 길다) */
+var _ocLin=openChallenge;
+openChallenge=function(i){ _ocLin.apply(this,arguments); var ch=G&&G.challenge, sl=G&&G.loadout&&G.loadout[i]; if(ch&&ch.sa&&sl&&sl.id==='linear'){ ch.timeMax=ch.timeLeft=LIN_TIME; } };
+
+/* 출전 화면 : 초각성 칩 + 쉬운 문제 구매 (150,000P) */
+var _rlLin=renderLoadout;
+renderLoadout=function(){
+  _rlLin.apply(this,arguments);
+  try{
+    if(!X.saOwned('linear')) return;
+    var ag=document.getElementById('awakenGrid'); if(!ag) return;
+    var sg=document.getElementById('saGrid');
+    if(!sg){ sg=document.createElement('div'); sg.id='saGrid'; sg.style.marginTop='16px'; ag.insertAdjacentElement('afterend',sg); }
+    sg.style.display='';
+    var grid=sg.querySelector('.pickgrid');
+    if(!grid){ sg.innerHTML='<div class="mono" style="font-size:11px;margin-bottom:8px;color:var(--ink-soft)">✦✦ 초각성 — 훨씬 어려운 문제(시간 정지) · 쿨타임 6초</div>'; grid=document.createElement('div'); grid.className='pickgrid'; sg.appendChild(grid); }
+    var sk=skillById('linear'), on=X.saActive('linear'), chip=document.createElement('div'); chip.className='pickchip tier-LL';
+    chip.innerHTML='<div class="pc-t">'+(on?'초각성 · ON ✦✦':'초각성 · OFF')+'</div>✦✦ '+sk.name+'<div style="font-size:10px;opacity:.75;margin-top:4px;font-weight:400">「교점 폭발」 괄호·분수·소수·연립·미지 계수 방정식 → 직선 빔이 교차하며 폭발 (제한 40초)</div>';
+    if(on) chip.style.outline='2px solid var(--ink)';
+    chip.onclick=function(){ meta.saOn=meta.saOn||{}; meta.saOn.linear=!on; saveMeta(); renderLoadout(); };
+    grid.appendChild(chip);
+    var price=X.easyPrice('linear'), has=X.saEasy('linear'), row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0 0;margin-top:10px;border-top:1px solid var(--grid)';
+    var lab=document.createElement('div'); lab.style.cssText='font-size:12px;font-weight:700'; lab.textContent='✦✦ '+sk.name+' · 쉬운 문제';
+    var bt=document.createElement('button'); bt.className='btn ghost'; bt.style.cssText='width:auto;padding:7px 10px;font-size:11px'; bt.textContent=has?'구매 완료 ✓':'쉬운 문제 (−'+price.toLocaleString()+'P)'; bt.disabled=has;
+    bt.onclick=function(){ if(!isAdmin()&&meta.currency<price){ tz('포인트가 부족합니다. (필요 '+price.toLocaleString()+'P)'); return; }
+      if(!confirm('「'+sk.name+'」 초각성 문제를 쉬운 난이도로 변경할까요? ('+price.toLocaleString()+'P)')) return;
+      if(!isAdmin()) meta.currency-=price; meta.saEasy=meta.saEasy||{}; meta.saEasy.linear=true; saveMeta(); renderLoadout(); };
+    row.appendChild(lab); row.appendChild(bt); sg.appendChild(row);
+  }catch(e){ if(window.console) console.error('[linear SA loadout]',e); }
+};
 })();
 })();
 })();
